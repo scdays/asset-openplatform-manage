@@ -1,6 +1,7 @@
 <template>
-  <div class="p_16">
+  <div class="p_16 partner-detail-page">
     <a-breadcrumb>
+      <a-breadcrumb-item><a @click.prevent="$router.push({ name: 'OpenPlatformOverview' })">功能总览</a></a-breadcrumb-item>
       <a-breadcrumb-item><a @click.prevent="goList">合作方管理</a></a-breadcrumb-item>
       <a-breadcrumb-item>{{ partner.partnerName || partnerId }}</a-breadcrumb-item>
     </a-breadcrumb>
@@ -17,7 +18,7 @@
               partnerId: {{ partner.partnerId }} · {{ partner.partnerType }} · QPS {{ partner.rateLimitQps == null ? '不限' : partner.rateLimitQps }}
             </div>
           </div>
-          <div>
+          <div class="detail-actions">
             <a-button @click="goEdit">编辑</a-button>
             <a-button type="primary" style="margin-left: 8px;" @click="credentialVisible = true">生成凭证</a-button>
           </div>
@@ -43,7 +44,7 @@
           </a-tab-pane>
 
           <a-tab-pane key="cred" tab="接入凭证">
-            <div class="table-operator">
+            <div class="table-operator table-operator-fixed">
               <span class="field-helper">secret 仅生成时展示一次</span>
               <a-button type="primary" @click="credentialVisible = true">生成凭证</a-button>
             </div>
@@ -156,6 +157,12 @@ export default {
   padding-bottom: 16px;
   border-bottom: 1px solid #f0f0f0;
 }
+
+.detail-actions {
+  display: flex;
+  align-items: center;
+}
+
 .detail-title {
   font-size: 18px;
   font-weight: 500;
@@ -165,9 +172,24 @@ export default {
   font-size: 13px;
   margin-top: 4px;
 }
+
+.table-operator-fixed {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 .field-helper {
   font-size: 12px;
   color: rgba(0, 0, 0, 0.45);
   margin-bottom: 8px;
+}
+
+.partner-detail-page :deep(.ant-card-body) {
+  padding: 20px;
+}
+
+.partner-detail-page :deep(.ant-descriptions-bordered .ant-descriptions-item-label) {
+  background: #fafafa;
 }
 </style>

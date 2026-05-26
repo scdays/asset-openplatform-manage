@@ -1,5 +1,5 @@
 <template>
-  <div class="p_16">
+  <div class="p_16 partner-list-page">
     <a-breadcrumb>
       <a-breadcrumb-item>开放平台</a-breadcrumb-item>
       <a-breadcrumb-item>
@@ -9,49 +9,46 @@
       <a-breadcrumb-item>合作方列表</a-breadcrumb-item>
     </a-breadcrumb>
 
-    <a-card :bordered="false" style="margin: 16px 0; padding-top: 14px;">
-      <div class="table-page-search-wrapper a_row_m_0">
-        <a-form :label-col="{ span: 8 }" :wrapper-col="{ span: 16 }">
-          <div class="div_table">
-            <div class="div_table_cell">
-              <a-row :gutter="[16, 16]">
-                <a-col :xs="24" :sm="12" :xl="8">
-                  <a-form-item label="接入方 ID">
-                    <a-input v-model="queryParam.partnerId" placeholder="partnerId" allow-clear />
-                  </a-form-item>
-                </a-col>
-                <a-col :xs="24" :sm="12" :xl="8">
-                  <a-form-item label="名称">
-                    <a-input v-model="queryParam.partnerName" placeholder="partnerName" allow-clear />
-                  </a-form-item>
-                </a-col>
-                <a-col :xs="24" :sm="12" :xl="8">
-                  <a-form-item label="状态">
-                    <a-select v-model="queryParam.status" placeholder="全部" allow-clear>
-                      <a-select-option value="">全部</a-select-option>
-                      <a-select-option value="ACTIVE">ACTIVE</a-select-option>
-                      <a-select-option value="DISABLED">DISABLED</a-select-option>
-                    </a-select>
-                  </a-form-item>
-                </a-col>
-              </a-row>
-            </div>
-            <div class="div_table_cell">
-              <div class="div_table_action">
+    <a-card :bordered="false" class="partner-list-search-card">
+      <a-form :label-col="{ span: 7 }" :wrapper-col="{ span: 17 }" class="partner-search-form">
+        <a-row :gutter="16" type="flex" align="bottom">
+          <a-col :xs="24" :sm="12" :xl="7">
+            <a-form-item label="接入方 ID">
+              <a-input v-model="queryParam.partnerId" placeholder="partnerId" allow-clear />
+            </a-form-item>
+          </a-col>
+          <a-col :xs="24" :sm="12" :xl="7">
+            <a-form-item label="名称">
+              <a-input v-model="queryParam.partnerName" placeholder="partnerName" allow-clear />
+            </a-form-item>
+          </a-col>
+          <a-col :xs="24" :sm="12" :xl="6">
+            <a-form-item label="状态">
+              <a-select v-model="queryParam.status" placeholder="全部" allow-clear>
+                <a-select-option value="">全部</a-select-option>
+                <a-select-option value="ACTIVE">ACTIVE</a-select-option>
+                <a-select-option value="DISABLED">DISABLED</a-select-option>
+              </a-select>
+            </a-form-item>
+          </a-col>
+          <a-col :xs="24" :sm="24" :xl="4" class="partner-search-actions-col">
+            <a-form-item label=" " :colon="false" class="partner-search-actions-item">
+              <div class="partner-search-actions">
+                <a-button @click="resetQuery">重置</a-button>
                 <a-button type="primary" @click="$refs.table.refresh(true)">查询</a-button>
               </div>
-            </div>
-          </div>
-        </a-form>
+            </a-form-item>
+          </a-col>
+        </a-row>
+      </a-form>
+
+      <div class="partner-list-toolbar">
+        <span class="api-hint">GET /internal/admin/partners</span>
+        <a-button type="primary" icon="plus" @click="goCreate">新建合作方</a-button>
       </div>
     </a-card>
 
-    <a-card :bordered="false">
-      <div class="table-operator">
-        <a-button type="primary" icon="plus" @click="goCreate">新建合作方</a-button>
-        <span style="color: rgba(0,0,0,.45); font-size: 12px;">GET /internal/admin/partners</span>
-      </div>
-
+    <a-card :bordered="false" class="partner-list-table-card">
       <s-table
         ref="table"
         size="default"
@@ -76,9 +73,9 @@
           {{ formatCapabilities(text) }}
         </span>
         <span slot="action" slot-scope="text, record">
-          <a @click="goEdit(record.partnerId)">编辑</a>
+          <a class="action_btn" @click="goEdit(record.partnerId)">编辑</a>
           <a-divider type="vertical" />
-          <a @click="goDetail(record.partnerId)">详情</a>
+          <a class="action_btn" @click="goDetail(record.partnerId)">详情</a>
         </span>
       </s-table>
     </a-card>
@@ -125,12 +122,11 @@ export default {
         return listPartners(params).then(data => {
           let items = (data && data.items) || []
           items = this.filterClient(items)
-          const result = {
+          return {
             data: items,
             pageNo: (data && data.page) || page,
             totalCount: data ? data.total : items.length
           }
-          return result
         })
       }
     }
@@ -149,6 +145,14 @@ export default {
       if (!caps || !caps.length) return '-'
       return caps.map(c => capabilityLabel(c).split(' ')[0]).join('、')
     },
+    resetQuery () {
+      this.queryParam = {
+        partnerId: undefined,
+        partnerName: undefined,
+        status: undefined
+      }
+      this.$refs.table.refresh(true)
+    },
     goCreate () {
       this.$router.push({ name: 'PartnerCreate' })
     },
@@ -161,3 +165,82 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+.partner-list-page :deep(.ant-breadcrumb) {
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.partner-list-search-card {
+  margin: 16px 0;
+}
+
+.partner-list-search-card :deep(.ant-card-body) {
+  padding: 18px 20px 16px;
+}
+
+.partner-list-table-card :deep(.ant-card-body) {
+  padding: 16px 20px 20px;
+}
+
+.partner-search-form :deep(.ant-form-item) {
+  margin-bottom: 0;
+}
+
+.partner-search-actions-col {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.partner-search-actions-item :deep(.ant-form-item-label) {
+  visibility: hidden;
+}
+
+.partner-search-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 32px;
+}
+
+.partner-list-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.partner-list-toolbar .ant-btn {
+  flex-shrink: 0;
+}
+
+.api-hint {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+  font-family: Consolas, monospace;
+  line-height: 32px;
+}
+
+.partner-list-page :deep(.ant-table-thead > tr > th) {
+  background: #fafafa;
+}
+
+@media (max-width: 1199px) {
+  .partner-search-actions-col {
+    justify-content: flex-start;
+    margin-top: 4px;
+  }
+
+  .partner-search-form :deep(.ant-form-item) {
+    margin-bottom: 12px;
+  }
+
+  .partner-search-actions-col :deep(.ant-form-item) {
+    margin-bottom: 0;
+  }
+}
+</style>

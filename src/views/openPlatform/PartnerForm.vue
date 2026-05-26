@@ -1,6 +1,7 @@
 <template>
-  <div class="p_16">
+  <div class="p_16 partner-form-page">
     <a-breadcrumb>
+      <a-breadcrumb-item><a @click.prevent="$router.push({ name: 'OpenPlatformOverview' })">功能总览</a></a-breadcrumb-item>
       <a-breadcrumb-item><a @click.prevent="goList">合作方管理</a></a-breadcrumb-item>
       <a-breadcrumb-item>{{ isEdit ? '编辑合作方' : '新建合作方' }}</a-breadcrumb-item>
     </a-breadcrumb>
@@ -58,8 +59,10 @@
             <capability-checkbox-group v-model="form.capabilities" />
           </a-form-model-item>
           <a-form-model-item :wrapper-col="{ span: 14, offset: 6 }">
-            <a-button type="primary" :loading="submitting" @click="handleSubmit">提交</a-button>
-            <a-button style="margin-left: 8px;" @click="goList">取消</a-button>
+            <div class="form-actions">
+              <a-button @click="goList">取消</a-button>
+              <a-button type="primary" :loading="submitting" style="margin-left: 8px;" @click="handleSubmit">提交</a-button>
+            </div>
           </a-form-model-item>
         </a-form-model>
       </a-spin>
@@ -169,9 +172,24 @@ export default {
   font-size: 12px;
   color: #531dab;
 }
+
+.partner-form-page :deep(.ant-card-body) {
+  padding: 20px 20px 12px;
+}
+
+.partner-form-page :deep(.ant-form-item) {
+  margin-bottom: 14px;
+}
+
 .field-helper {
   font-size: 12px;
   color: rgba(0, 0, 0, 0.45);
   margin-top: 4px;
+}
+
+.form-actions {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
 }
 </style>

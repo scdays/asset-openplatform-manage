@@ -2,41 +2,44 @@
   <div class="p_16 overview-page">
     <a-breadcrumb>
       <a-breadcrumb-item>开放平台</a-breadcrumb-item>
-      <a-breadcrumb-item>功能总览</a-breadcrumb-item>
+      <a-breadcrumb-item>功能总览 / 站点地图</a-breadcrumb-item>
     </a-breadcrumb>
 
     <a-card :bordered="false" style="margin: 16px 0;">
       <div class="overview-header">
-        <div>
-          <h2>集成管理后台 · 全功能站点地图</h2>
-          <p>子应用路由自维护；顶栏菜单由主应用挂载。按阶段查看能力范围并快速进入已实现页面。</p>
+        <h2>集成管理后台 · 全功能站点地图</h2>
+        <p>子应用 asset-openplatform-manage 内部路由由页面设计维护；按卡片查看能力范围，悬浮整卡可点击。</p>
+      </div>
+
+      <div class="overview-grid">
+        <div
+          v-for="item in items"
+          :key="item.key"
+          class="overview-card"
+          :class="{ disabled: !item.routeName }"
+          role="button"
+          tabindex="0"
+          @click="go(item)"
+          @keydown.enter="go(item)"
+          @keydown.space.prevent="go(item)"
+        >
+          <div class="overview-card-title">
+            <div class="overview-card-left">
+              <span class="overview-phase-dot" :class="`phase-dot-${item.phase.toLowerCase()}`" />
+              <strong>{{ item.title }}</strong>
+            </div>
+            <span class="overview-phase-tag" :class="`phase-tag-${item.phase.toLowerCase()}`">{{ item.phase }}</span>
+          </div>
+          <ul class="overview-list">
+            <li v-for="(line, index) in item.lines" :key="`${item.key}-${index}`">{{ line }}</li>
+          </ul>
+          <div class="overview-card-foot">
+            <span v-if="item.routeName">悬浮并点击进入</span>
+            <span v-else>规划中（暂未实现）</span>
+          </div>
         </div>
-        <a-button type="primary" @click="$router.push({ name: 'PartnerList' })">进入合作方管理</a-button>
       </div>
     </a-card>
-
-    <div class="overview-grid">
-      <a-card v-for="item in items" :key="item.key" :bordered="false" class="overview-card">
-        <div class="overview-card-title">
-          <div>
-            <a-tag :color="phaseColor(item.phase)">{{ item.phase }}</a-tag>
-            <span>{{ item.title }}</span>
-          </div>
-          <a-button
-            v-if="item.routeName"
-            type="link"
-            class="overview-card-action"
-            @click="$router.push({ name: item.routeName })"
-          >
-            进入
-          </a-button>
-          <span v-else class="coming-soon">规划中</span>
-        </div>
-        <ul class="overview-list">
-          <li v-for="(line, index) in item.lines" :key="`${item.key}-${index}`">{{ line }}</li>
-        </ul>
-      </a-card>
-    </div>
   </div>
 </template>
 
@@ -50,7 +53,7 @@ const items = [
     lines: [
       '列表：GET /internal/admin/partners',
       '新建/编辑：POST / PUT',
-      '详情：基本信息、能力、凭证、回调'
+      '详情：partnerId / 状态 / 凭证'
     ]
   },
   {
@@ -59,8 +62,8 @@ const items = [
     title: 'API 调用记录',
     lines: [
       '调用列表与筛选',
-      '调用详情（requestId / resourceId）',
-      'Partner 统计能力联动'
+      '调用详情 Drawer（requestId / resourceId）',
+      '失败原因与耗时分析'
     ]
   },
   {
@@ -70,7 +73,7 @@ const items = [
     lines: [
       '投递日志查询',
       'HTTP 状态与重试次数',
-      '支持按 Partner / 事件类型筛选'
+      '支持按 Partner / 事件类型过滤'
     ]
   },
   {
@@ -133,38 +136,68 @@ export default {
     }
   },
   methods: {
-    phaseColor (phase) {
-      if (phase === 'P0') return 'blue'
-      if (phase === 'P1') return 'green'
-      if (phase === 'P2') return 'orange'
-      return 'purple'
+    go (item) {
+      if (item.routeName) {
+        this.$router.push({ name: item.routeName })
+        return
+      }
+      this.$message.info(`${item.title} 处于规划阶段`)
     }
   }
 }
 </script>
 
 <style scoped>
+.overview-page {
+  background: #f0f2f5;
+}
+
 .overview-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
+  margin-bottom: 14px;
 }
 
 .overview-header h2 {
-  margin: 0 0 8px;
-  font-size: 18px;
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
 }
 
 .overview-header p {
   margin: 0;
   color: rgba(0, 0, 0, 0.45);
+  line-height: 20px;
+  font-size: 13px;
 }
 
 .overview-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
+}
+
+.overview-card {
+  border: 1px solid #f0f0f0;
+  border-radius: 2px;
+  padding: 14px 16px 12px;
+  background: #fff;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.overview-card:hover {
+  border-color: #d9e8ff;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.overview-card:focus {
+  outline: 2px solid #bae7ff;
+  outline-offset: 2px;
+}
+
+.overview-card.disabled {
+  opacity: 0.92;
 }
 
 .overview-card-title {
@@ -174,27 +207,85 @@ export default {
   margin-bottom: 8px;
 }
 
-.overview-card-title span {
-  font-weight: 500;
+.overview-card-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.overview-card-action {
-  padding-right: 0;
+.overview-phase-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
-.coming-soon {
-  color: rgba(0, 0, 0, 0.45);
-  font-size: 12px;
+.phase-dot-p0 {
+  background: #1890ff;
+}
+
+.phase-dot-p1 {
+  background: #52c41a;
+}
+
+.phase-dot-p2 {
+  background: #faad14;
+}
+
+.phase-dot-p3 {
+  background: #722ed1;
+}
+
+.overview-phase-tag {
+  font-size: 11px;
+  line-height: 18px;
+  border-radius: 2px;
+  padding: 0 6px;
+  border: 1px solid;
+}
+
+.phase-tag-p0 {
+  color: #0958d9;
+  border-color: #91d5ff;
+  background: #e6f7ff;
+}
+
+.phase-tag-p1 {
+  color: #389e0d;
+  border-color: #b7eb8f;
+  background: #f6ffed;
+}
+
+.phase-tag-p2 {
+  color: #d46b08;
+  border-color: #ffd591;
+  background: #fff7e6;
+}
+
+.phase-tag-p3 {
+  color: #531dab;
+  border-color: #d3adf7;
+  background: #f9f0ff;
 }
 
 .overview-list {
   margin: 0;
   padding-left: 18px;
   color: rgba(0, 0, 0, 0.65);
+  min-height: 70px;
 }
 
 .overview-list li {
-  line-height: 24px;
+  line-height: 21px;
+  font-size: 13px;
+}
+
+.overview-card-foot {
+  margin-top: 6px;
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+  border-top: 1px dashed #f0f0f0;
+  padding-top: 8px;
 }
 
 @media (max-width: 1200px) {
