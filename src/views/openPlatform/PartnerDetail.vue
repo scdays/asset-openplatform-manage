@@ -63,6 +63,64 @@
             </a-table>
           </a-tab-pane>
 
+          <a-tab-pane key="stats" tab="调用统计">
+            <a-spin :spinning="statsLoading">
+              <a-row :gutter="16" class="stats-cards">
+                <a-col :xs="24" :sm="12" :xl="6">
+                  <a-card size="small" class="stats-card" title="今日总调用">{{ formatStatNumber(partnerStats.todayTotal) }}</a-card>
+                </a-col>
+                <a-col :xs="24" :sm="12" :xl="6">
+                  <a-card size="small" class="stats-card" title="今日成功">{{ formatStatNumber(partnerStats.todaySuccess) }}</a-card>
+                </a-col>
+                <a-col :xs="24" :sm="12" :xl="6">
+                  <a-card size="small" class="stats-card" title="今日失败">{{ formatStatNumber(calcFailedCount(partnerStats)) }}</a-card>
+                </a-col>
+                <a-col :xs="24" :sm="12" :xl="6">
+                  <a-card size="small" class="stats-card" title="今日成功率">{{ formatPercent(partnerStats.todaySuccessRate) }}</a-card>
+                </a-col>
+              </a-row>
+
+              <a-table
+                row-key="responseCode"
+                :columns="errorCodeColumns"
+                :data-source="partnerStats.topErrorCodes || []"
+                :pagination="false"
+                size="small"
+                class="stats-table"
+              />
+
+              <a-table
+                row-key="date"
+                :columns="trendColumns"
+                :data-source="partnerStats.dailyTrend || []"
+                :pagination="false"
+                size="small"
+                class="stats-table"
+              />
+
+              <p class="field-helper" style="margin-top: 8px;">GET /internal/admin/partners/{partnerId}/stats</p>
+            </a-spin>
+          </a-tab-pane>
+
+          <a-tab-pane key="webhook" tab="Webhook 日志">
+            <a-spin :spinning="webhookLoading">
+              <a-table
+                row-key="id"
+                :columns="webhookColumns"
+                :data-source="webhookLogs"
+                :pagination="false"
+                size="small"
+              >
+                <span slot="status" slot-scope="text">
+                  <a-tag :color="webhookStatusColor(text)">{{ text || '-' }}</a-tag>
+                </span>
+                <span slot="httpStatus" slot-scope="text">{{ text == null ? '-' : text }}</span>
+                <span slot="createdAt" slot-scope="text">{{ formatDateTime(text) }}</span>
+              </a-table>
+              <p class="field-helper" style="margin-top: 8px;">GET /internal/admin/webhook-deliveries?partnerId={partnerId}</p>
+            </a-spin>
+          </a-tab-pane>
+
           <a-tab-pane key="callback" tab="回调配置">
             <a-form-model :label-col="{ span: 4 }" :wrapper-col="{ span: 12 }">
               <a-form-model-item label="defaultCallbackUrl">
@@ -86,6 +144,7 @@
 
 <script>
 import { getPartner, listCredentials } from '@/api/partner'
+import { getPartnerStats, listWebhookDeliveries } from '@/api/openPlatform/invocation'
 import CapabilityCheckboxGroup from './components/CapabilityCheckboxGroup'
 import CredentialCreateModal from './components/CredentialCreateModal'
 
@@ -93,6 +152,28 @@ const credentialColumns = [
   { title: 'clientId', dataIndex: 'clientId' },
   { title: '状态', dataIndex: 'status', scopedSlots: { customRender: 'status' } },
   { title: '创建时间', dataIndex: 'createdAt', scopedSlots: { customRender: 'createdAt' } }
+]
+
+const errorCodeColumns = [
+  { title: 'Top 错误码', dataIndex: 'responseCode', width: 160 },
+  { title: '次数', dataIndex: 'count', width: 120 }
+]
+
+const trendColumns = [
+  { title: '日期', dataIndex: 'date', width: 160 },
+  { title: '总调用', dataIndex: 'totalCount', width: 120 },
+  { title: '成功调用', dataIndex: 'successCount', width: 120 },
+  { title: '失败调用', dataIndex: 'failCount', width: 120 },
+  { title: '成功率', dataIndex: 'successRate', customRender: value => `${(Number(value || 0) * 100).toFixed(2)}%` }
+]
+
+const webhookColumns = [
+  { title: 'eventType', dataIndex: 'eventType', width: 180 },
+  { title: 'callbackUrl', dataIndex: 'callbackUrl', ellipsis: true },
+  { title: 'HTTP', dataIndex: 'httpStatus', scopedSlots: { customRender: 'httpStatus' }, width: 90 },
+  { title: '重试次数', dataIndex: 'retryCount', width: 110 },
+  { title: '状态', dataIndex: 'status', scopedSlots: { customRender: 'status' }, width: 110 },
+  { title: '创建时间', dataIndex: 'createdAt', scopedSlots: { customRender: 'createdAt' }, width: 180 }
 ]
 
 export default {
@@ -106,16 +187,33 @@ export default {
       partnerId: this.$route.params.partnerId,
       partner: {},
       credentials: [],
+      partnerStats: {},
+      webhookLogs: [],
       loading: false,
       credLoading: false,
+      statsLoading: false,
+      webhookLoading: false,
       activeTab: 'basic',
       credentialVisible: false,
-      credentialColumns
+      credentialColumns,
+      errorCodeColumns,
+      trendColumns,
+      webhookColumns
     }
   },
   created () {
     this.loadPartner()
     this.loadCredentials()
+  },
+  watch: {
+    activeTab (value) {
+      if (value === 'stats' && !this.statsLoading && !Object.keys(this.partnerStats || {}).length) {
+        this.loadPartnerStats()
+      }
+      if (value === 'webhook' && !this.webhookLoading && !this.webhookLogs.length) {
+        this.loadWebhookLogs()
+      }
+    }
   },
   methods: {
     loadPartner () {
@@ -137,6 +235,65 @@ export default {
         .finally(() => {
           this.credLoading = false
         })
+    },
+    loadPartnerStats () {
+      this.statsLoading = true
+      getPartnerStats(this.partnerId)
+        .then(data => {
+          this.partnerStats = data || {}
+        })
+        .catch(() => {
+          this.partnerStats = {}
+        })
+        .finally(() => {
+          this.statsLoading = false
+        })
+    },
+    loadWebhookLogs () {
+      this.webhookLoading = true
+      listWebhookDeliveries({
+        partnerId: this.partnerId,
+        page: 1,
+        size: 10
+      })
+        .then(data => {
+          this.webhookLogs = (data && data.items) || []
+        })
+        .catch(() => {
+          this.webhookLogs = []
+        })
+        .finally(() => {
+          this.webhookLoading = false
+        })
+    },
+    formatStatNumber (value) {
+      return value === undefined || value === null || value === '' ? '-' : value
+    },
+    calcFailedCount (stats) {
+      if (!stats) return '-'
+      const total = Number(stats.todayTotal || 0)
+      const success = Number(stats.todaySuccess || 0)
+      return total - success
+    },
+    formatPercent (value) {
+      if (value === undefined || value === null || value === '') return '-'
+      const numberValue = Number(value)
+      if (Number.isNaN(numberValue)) return '-'
+      if (numberValue > 1) return `${numberValue.toFixed(2)}%`
+      return `${(numberValue * 100).toFixed(2)}%`
+    },
+    webhookStatusColor (status) {
+      if (status === 'SUCCESS') return 'green'
+      if (status === 'FAILED') return 'red'
+      if (status === 'PENDING') return 'orange'
+      return 'default'
+    },
+    formatDateTime (value) {
+      if (!value) return '-'
+      if (this.$moment) {
+        return this.$moment(value).format('YYYY-MM-DD HH:mm:ss')
+      }
+      return value
     },
     goList () {
       this.$router.push({ name: 'PartnerList' })
@@ -191,5 +348,29 @@ export default {
 
 .partner-detail-page :deep(.ant-descriptions-bordered .ant-descriptions-item-label) {
   background: #fafafa;
+}
+
+.stats-cards {
+  margin-bottom: 12px;
+}
+
+.stats-card :deep(.ant-card-head) {
+  min-height: 40px;
+}
+
+.stats-card :deep(.ant-card-head-title) {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.stats-card :deep(.ant-card-body) {
+  font-size: 22px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.85);
+  padding: 12px 16px;
+}
+
+.stats-table {
+  margin-top: 8px;
 }
 </style>

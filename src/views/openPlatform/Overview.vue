@@ -60,9 +60,10 @@ const items = [
     key: 'invocation',
     phase: 'P1',
     title: 'API 调用记录',
+    routeName: 'InvocationList',
     lines: [
       '调用列表与筛选',
-      '调用详情 Drawer（requestId / resourceId）',
+      '支持分页查询',
       '失败原因与耗时分析'
     ]
   },
@@ -70,6 +71,7 @@ const items = [
     key: 'webhook',
     phase: 'P1',
     title: 'Webhook 投递',
+    routeName: 'WebhookDeliveryList',
     lines: [
       '投递日志查询',
       'HTTP 状态与重试次数',
@@ -78,7 +80,7 @@ const items = [
   },
   {
     key: 'dashboard',
-    phase: 'P2',
+    phase: 'P3',
     title: '运营看板',
     lines: [
       '全局调用量 / 成功率',
@@ -90,6 +92,7 @@ const items = [
     key: 'catalog',
     phase: 'P2',
     title: 'API 目录',
+    routeName: 'ApiCatalog',
     lines: [
       'api_operation 只读展示',
       '能力码与路径映射',
@@ -97,9 +100,21 @@ const items = [
     ]
   },
   {
+    key: 'developerDoc',
+    phase: 'P2',
+    title: '开发者文档',
+    routeName: 'DeveloperDoc',
+    lines: [
+      '支持查看接口规范',
+      '支持跳转 Swagger / OpenAPI',
+      '仅提供只读能力'
+    ]
+  },
+  {
     key: 'quota',
     phase: 'P2',
     title: '配额与限流',
+    routeName: 'QuotaLimit',
     lines: [
       'Partner 级 QPS 统计',
       '429 触发趋势',

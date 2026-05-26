@@ -30,6 +30,36 @@ export const asyncRouterMap = [
     meta: { title: '合作方详情' }
   },
   {
+    path: '/invocation',
+    name: 'InvocationList',
+    component: () => import('@/views/openPlatform/InvocationList'),
+    meta: { title: '调用记录', keepAlive: true }
+  },
+  {
+    path: '/webhook-log',
+    name: 'WebhookDeliveryList',
+    component: () => import('@/views/openPlatform/WebhookDeliveryList'),
+    meta: { title: 'Webhook 投递日志', keepAlive: true }
+  },
+  {
+    path: '/api-catalog',
+    name: 'ApiCatalog',
+    component: () => import('@/views/openPlatform/ApiCatalog'),
+    meta: { title: 'API 目录', keepAlive: true }
+  },
+  {
+    path: '/developer-doc',
+    name: 'DeveloperDoc',
+    component: () => import('@/views/openPlatform/DeveloperDoc'),
+    meta: { title: '开发者文档' }
+  },
+  {
+    path: '/quota',
+    name: 'QuotaLimit',
+    component: () => import('@/views/openPlatform/QuotaLimit'),
+    meta: { title: '配额与限流', keepAlive: true }
+  },
+  {
     path: '/',
     redirect: '/overview'
   }

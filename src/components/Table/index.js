@@ -101,7 +101,7 @@ export default {
       this.selectedRowKeys = []
       this.selectedRows = []
     },
-    columns(val) {
+    columns (val) {
       this.needTotalList = this.initTotalList(this.columns)
       this.initColumn()
     },
@@ -407,20 +407,20 @@ export default {
       <a-table {...{ props, scopedSlots: { ...this.$scopedSlots } }} onChange={this.loadData} onExpand={(expanded, record) => { this.$emit('expand', expanded, record) }}>
         <span slot="customTitle">
           {this.showTitle}
-            <a-popover trigger="click" >
-              <template slot="content">
-                <a-checkbox-group vModel={this.chooseItem} style={{ width: this.maxW + 'px' }}>
-                  {
-                    this.createFilterCheckbox()
-                  }
-                  <a-button type="primary" size="small" style={'float:right'} onClick={() => { this.chooseItemSave() }}>确认</a-button>
-                </a-checkbox-group>
-              </template>
-              <a-tooltip >
-                <template slot="title">设置列</template>
-                <a-icon type="setting" style="margin-left:5px"/>
-              </a-tooltip>
-            </a-popover>
+          <a-popover trigger="click" >
+            <template slot="content">
+              <a-checkbox-group vModel={this.chooseItem} style={{ width: this.maxW + 'px' }}>
+                {
+                  this.createFilterCheckbox()
+                }
+                <a-button type="primary" size="small" style={'float:right'} onClick={() => { this.chooseItemSave() }}>确认</a-button>
+              </a-checkbox-group>
+            </template>
+            <a-tooltip >
+              <template slot="title">设置列</template>
+              <a-icon type="setting" style="margin-left:5px"/>
+            </a-tooltip>
+          </a-popover>
         </span>
         { Object.keys(this.$slots).map(name => (<template slot={name}>{this.$slots[name]}</template>)) }
       </a-table>

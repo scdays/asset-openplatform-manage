@@ -26,24 +26,30 @@ openApiRequest.interceptors.request.use(config => {
 openApiRequest.interceptors.response.use(
   response => {
     const res = response.data
+    const silent = response && response.config && response.config.silent
     if (res == null || typeof res.code === 'undefined') {
       return res
     }
     if (res.code !== 0) {
-      notification.error({
-        message: '请求失败',
-        description: res.message || `错误码 ${res.code}`
-      })
+      if (!silent) {
+        notification.error({
+          message: '请求失败',
+          description: res.message || `错误码 ${res.code}`
+        })
+      }
       return Promise.reject(new Error(res.message || 'Error'))
     }
     return res.data
   },
   error => {
+    const silent = error && error.config && error.config.silent
     const msg = (error.response && error.response.data && error.response.data.message) || error.message
-    notification.error({
-      message: '网络错误',
-      description: msg
-    })
+    if (!silent) {
+      notification.error({
+        message: '网络错误',
+        description: msg
+      })
+    }
     return Promise.reject(error)
   }
 )
