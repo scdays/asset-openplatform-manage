@@ -48,6 +48,6 @@ export function triggerExportDownload (record) {
     link.click()
     document.body.removeChild(link)
     URL.revokeObjectURL(url)
-    message.success('外发文件已开始下载')
+    message.success('\u5916\u53d1\u6587\u4ef6\u5df2\u5f00\u59cb\u4e0b\u8f7d')
   })
 }

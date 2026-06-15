@@ -66,6 +66,12 @@ export const asyncRouterMap = [
     meta: { title: '配额与限流', keepAlive: true }
   },
   {
+    path: '/mock-manual',
+    name: 'MockManualIngest',
+    component: () => import('@/views/openPlatform/MockManualIngest'),
+    meta: { title: 'Mock 半人工导入' }
+  },
+  {
     path: '/',
     redirect: '/overview'
   }

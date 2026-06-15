@@ -111,6 +111,17 @@ const items = [
     ]
   },
   {
+    key: 'mockManual',
+    phase: 'P1',
+    title: 'Mock 半人工导入',
+    routeName: 'MockManualIngest',
+    lines: [
+      'manual ingest 模式联调',
+      'dispatch-packet / 预览 / 导入 XML',
+      '触发 FINISHED + 实例入库'
+    ]
+  },
+  {
     key: 'quota',
     phase: 'P2',
     title: '配额与限流',

@@ -71,6 +71,18 @@ export const WEBHOOK_EVENT_TYPES = [
   { value: 'EXPORT_READY', label: '外发就绪', color: 'gold' }
 ]
 
+export const OPEN_TASK_STATUSES = [
+  { value: 'RUNNING', label: '运行中', color: 'blue' },
+  { value: 'FINISHED', label: '已完成', color: 'green' },
+  { value: 'FAILED', label: '失败', color: 'red' },
+  { value: 'ACCEPTED', label: '已受理', color: 'default' }
+]
+
+export const MOCK_INGEST_MODES = [
+  { value: 'auto', label: '自动完成', color: 'default' },
+  { value: 'manual', label: '半人工', color: 'orange' }
+]
+
 export const HTTP_METHODS = [
   { value: 'GET', label: 'GET', color: 'green' },
   { value: 'POST', label: 'POST', color: 'blue' },
@@ -89,6 +101,8 @@ const REGISTRY = {
   capability: buildMap(CAPABILITIES),
   webhookDeliveryStatus: buildMap(WEBHOOK_DELIVERY_STATUSES),
   webhookEventType: buildMap(WEBHOOK_EVENT_TYPES),
+  openTaskStatus: buildMap(OPEN_TASK_STATUSES),
+  mockIngestMode: buildMap(MOCK_INGEST_MODES),
   httpMethod: buildMap(HTTP_METHODS)
 }
 
@@ -102,6 +116,8 @@ const OPTIONS_REGISTRY = {
   capability: CAPABILITIES,
   webhookDeliveryStatus: WEBHOOK_DELIVERY_STATUSES,
   webhookEventType: WEBHOOK_EVENT_TYPES,
+  openTaskStatus: OPEN_TASK_STATUSES,
+  mockIngestMode: MOCK_INGEST_MODES,
   httpMethod: HTTP_METHODS
 }
 
