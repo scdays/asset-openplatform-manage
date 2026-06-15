@@ -21,11 +21,22 @@ export function listInvocations (params = {}) {
     size: params.size || params.pageSize || 10,
     partnerId: params.partnerId,
     operationId: params.operationId,
+    domain: params.domain,
     response_code: params.responseCode,
+    resourceType: params.resourceType,
+    resourceId: params.resourceId,
     startedFrom: params.startedFrom,
     startedTo: params.startedTo
   })
   return openApiRequest.get(INVOCATION_PREFIX, { params: query })
+}
+
+export function getInvocationDetail (invocationId) {
+  return openApiRequest.get(`${INVOCATION_PREFIX}/${encodeURIComponent(invocationId)}`)
+}
+
+export function getInvocationResponseBody (invocationId) {
+  return openApiRequest.get(`${INVOCATION_PREFIX}/${encodeURIComponent(invocationId)}/response-body`)
 }
 
 export function getPartnerStats (partnerId) {
@@ -38,7 +49,17 @@ export function listWebhookDeliveries (params = {}) {
     size: params.size || params.pageSize || 10,
     partnerId: params.partnerId,
     eventType: params.eventType,
-    status: params.status
+    status: params.status,
+    resourceType: params.resourceType,
+    resourceId: params.resourceId
   })
   return openApiRequest.get(WEBHOOK_DELIVERY_PREFIX, { params: query })
+}
+
+export function getWebhookDeliveryDetail (deliveryId) {
+  return openApiRequest.get(`${WEBHOOK_DELIVERY_PREFIX}/${encodeURIComponent(deliveryId)}`)
+}
+
+export function retryWebhookDelivery (deliveryId) {
+  return openApiRequest.post(`${WEBHOOK_DELIVERY_PREFIX}/${encodeURIComponent(deliveryId)}/retry`)
 }

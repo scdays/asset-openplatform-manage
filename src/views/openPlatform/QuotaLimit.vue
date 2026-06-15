@@ -19,9 +19,13 @@
           <a-col :xs="24" :sm="12" :xl="6">
             <a-form-item label="状态">
               <a-select v-model="queryParam.status" placeholder="全部" allow-clear>
-                <a-select-option value="">全部</a-select-option>
-                <a-select-option value="ACTIVE">ACTIVE</a-select-option>
-                <a-select-option value="DISABLED">DISABLED</a-select-option>
+                <a-select-option
+                  v-for="item in statusFilterOptions"
+                  :key="item.value || 'all'"
+                  :value="item.value"
+                >
+                  {{ item.label }}
+                </a-select-option>
               </a-select>
             </a-form-item>
           </a-col>
@@ -54,7 +58,7 @@
         <span slot="serial" slot-scope="text, record, index">{{ index + 1 }}</span>
         <span slot="partnerId" slot-scope="text">{{ text || '-' }}</span>
         <span slot="status" slot-scope="text">
-          <a-tag :color="text === 'ACTIVE' ? 'green' : 'red'">{{ text || '-' }}</a-tag>
+          <enum-tag type="partnerStatus" :value="text" />
         </span>
         <span slot="rateLimitQps" slot-scope="text">{{ text == null ? '不限' : text }}</span>
         <span slot="dailyQuota" slot-scope="text">{{ text == null ? '-' : text }}</span>
@@ -71,6 +75,8 @@
 
 <script>
 import { STable } from '@/components'
+import EnumTag from '@/components/openPlatform/EnumTag'
+import { optionsOf } from '@/constants/openPlatformDisplay'
 import { listPartnerQuotaStats } from '@/api/openPlatform/quota'
 
 const columns = [
@@ -89,10 +95,11 @@ const columns = [
 
 export default {
   name: 'QuotaLimit',
-  components: { STable },
+  components: { STable, EnumTag },
   data () {
     return {
       columns,
+      statusFilterOptions: optionsOf('partnerStatus', { includeAll: true }),
       queryParam: {
         partnerId: undefined,
         status: undefined

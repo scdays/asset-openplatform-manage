@@ -18,21 +18,37 @@
             </a-form-item>
           </a-col>
           <a-col :xs="24" :sm="12" :xl="6">
-            <a-form-item label="eventType">
-              <a-input v-model="queryParam.eventType" placeholder="例如 TASK_COMPLETED" allow-clear />
+            <a-form-item label="事件类型">
+              <a-select v-model="queryParam.eventType" placeholder="全部" allow-clear>
+                <a-select-option
+                  v-for="item in eventTypeFilterOptions"
+                  :key="item.value || 'all'"
+                  :value="item.value"
+                >
+                  {{ item.label }}
+                </a-select-option>
+              </a-select>
             </a-form-item>
           </a-col>
           <a-col :xs="24" :sm="12" :xl="6">
             <a-form-item label="投递状态">
               <a-select v-model="queryParam.status" placeholder="全部" allow-clear>
-                <a-select-option value="">全部</a-select-option>
-                <a-select-option value="SUCCESS">SUCCESS</a-select-option>
-                <a-select-option value="FAILED">FAILED</a-select-option>
-                <a-select-option value="PENDING">PENDING</a-select-option>
+                <a-select-option
+                  v-for="item in statusFilterOptions"
+                  :key="item.value || 'all'"
+                  :value="item.value"
+                >
+                  {{ item.label }}
+                </a-select-option>
               </a-select>
             </a-form-item>
           </a-col>
-          <a-col :xs="24" :sm="24" :xl="6" class="webhook-search-actions-col">
+          <a-col :xs="24" :sm="12" :xl="5">
+            <a-form-item label="关联 resourceId">
+              <a-input v-model="queryParam.resourceId" placeholder="taskId / vulInfoID" allow-clear />
+            </a-form-item>
+          </a-col>
+          <a-col :xs="24" :sm="24" :xl="4" class="webhook-search-actions-col">
             <a-form-item label=" " :colon="false" class="webhook-search-actions-item">
               <div class="webhook-search-actions">
                 <a-button type="primary" @click="$refs.table.refresh(true)">查询</a-button>
@@ -47,6 +63,7 @@
     <a-card :bordered="false" class="webhook-table-card">
       <div class="webhook-toolbar">
         <span class="api-hint">GET /internal/admin/webhook-deliveries</span>
+        <span class="toolbar-note">POST .../webhook-deliveries/{id}/retry</span>
       </div>
       <s-table
         ref="table"
@@ -59,44 +76,85 @@
         show-pagination="auto"
       >
         <span slot="serial" slot-scope="text, record, index">{{ index + 1 }}</span>
-        <span slot="status" slot-scope="text">
-          <a-tag :color="statusColor(text)">{{ text || '-' }}</a-tag>
+        <span slot="eventType" slot-scope="text">
+          <enum-tag type="webhookEventType" :value="text" />
         </span>
-        <span slot="httpStatus" slot-scope="text">{{ text == null ? '-' : text }}</span>
+        <span slot="resource" slot-scope="text, record">
+          <template v-if="record.resourceId">
+            <enum-tag v-if="record.resourceType" type="domain" :value="record.resourceType" />
+            <code>{{ record.resourceId }}</code>
+          </template>
+          <span v-else>-</span>
+        </span>
+        <span slot="status" slot-scope="text">
+          <enum-tag type="webhookDeliveryStatus" :value="text" />
+        </span>
+        <span slot="httpStatus" slot-scope="text">
+          <a-tag :color="httpStatusColor(text)">{{ formatHttpStatus(text) }}</a-tag>
+        </span>
         <span slot="createdAt" slot-scope="text">{{ formatDateTime(text) }}</span>
         <span slot="nextRetryAt" slot-scope="text">{{ formatDateTime(text) }}</span>
+        <span slot="action" slot-scope="text, record">
+          <a @click="openDetail(record)">详情</a>
+          <template v-if="record.resourceId">
+            <a-divider type="vertical" />
+            <a @click="goInvocations(record)">调用记录</a>
+          </template>
+          <template v-if="record.status === 'FAILED'">
+            <a-divider type="vertical" />
+            <a @click="quickRetry(record)">重试</a>
+          </template>
+        </span>
       </s-table>
     </a-card>
+
+    <webhook-delivery-detail-drawer
+      :visible="drawerVisible"
+      :delivery-id="selectedDeliveryId"
+      @close="drawerVisible = false"
+      @retried="handleRetried"
+    />
   </div>
 </template>
 
 <script>
 import { STable } from '@/components'
-import { listWebhookDeliveries } from '@/api/openPlatform/invocation'
+import EnumTag from '@/components/openPlatform/EnumTag'
+import { formatHttpStatus, httpStatusColor, labelOf, optionsOf } from '@/constants/openPlatformDisplay'
+import { listWebhookDeliveries, retryWebhookDelivery } from '@/api/openPlatform/invocation'
+import { resolveInvocationLinkQuery } from '@/utils/openPlatformLink'
+import WebhookDeliveryDetailDrawer from './components/WebhookDeliveryDetailDrawer'
 
 const columns = [
   { title: '序号', scopedSlots: { customRender: 'serial' }, width: 60 },
-  { title: 'partnerId', dataIndex: 'partnerId', width: 160 },
-  { title: 'eventType', dataIndex: 'eventType', width: 180 },
+  { title: 'deliveryId', dataIndex: 'id', width: 90 },
+  { title: 'partnerId', dataIndex: 'partnerId', width: 140 },
+  { title: '事件类型', dataIndex: 'eventType', scopedSlots: { customRender: 'eventType' }, width: 160 },
+  { title: '关联资源', dataIndex: 'resourceId', scopedSlots: { customRender: 'resource' }, width: 180 },
   { title: 'callbackUrl', dataIndex: 'callbackUrl', ellipsis: true },
   { title: 'HTTP', dataIndex: 'httpStatus', scopedSlots: { customRender: 'httpStatus' }, width: 90 },
-  { title: '重试次数', dataIndex: 'retryCount', width: 100 },
-  { title: '状态', dataIndex: 'status', scopedSlots: { customRender: 'status' }, width: 110 },
-  { title: '创建时间', dataIndex: 'createdAt', scopedSlots: { customRender: 'createdAt' }, width: 180 },
-  { title: '下次重试', dataIndex: 'nextRetryAt', scopedSlots: { customRender: 'nextRetryAt' }, width: 180 }
+  { title: '重试次数', dataIndex: 'retryCount', width: 90 },
+  { title: '状态', dataIndex: 'status', scopedSlots: { customRender: 'status' }, width: 100 },
+  { title: '创建时间', dataIndex: 'createdAt', scopedSlots: { customRender: 'createdAt' }, width: 170 },
+  { title: '操作', scopedSlots: { customRender: 'action' }, width: 120, fixed: 'right' }
 ]
 
 export default {
   name: 'WebhookDeliveryList',
-  components: { STable },
+  components: { STable, EnumTag, WebhookDeliveryDetailDrawer },
   data () {
     return {
       columns,
+      statusFilterOptions: optionsOf('webhookDeliveryStatus', { includeAll: true }),
+      eventTypeFilterOptions: optionsOf('webhookEventType', { includeAll: true }),
       queryParam: {
         partnerId: undefined,
         eventType: undefined,
-        status: undefined
+        status: undefined,
+        resourceId: undefined
       },
+      drawerVisible: false,
+      selectedDeliveryId: null,
       pagination: {
         pageSize: 10,
         showSizeChanger: true,
@@ -118,21 +176,78 @@ export default {
       }
     }
   },
+  mounted () {
+    this.applyRouteQuery()
+  },
+  watch: {
+    '$route.query': {
+      handler () {
+        this.applyRouteQuery()
+      },
+      deep: true
+    }
+  },
   methods: {
+    applyRouteQuery () {
+      const q = this.$route.query || {}
+      let changed = false
+      if (q.partnerId !== undefined && q.partnerId !== this.queryParam.partnerId) {
+        this.queryParam.partnerId = q.partnerId || undefined
+        changed = true
+      }
+      if (q.resourceId !== undefined && q.resourceId !== this.queryParam.resourceId) {
+        this.queryParam.resourceId = q.resourceId || undefined
+        changed = true
+      }
+      if (changed && this.$refs.table) {
+        this.$refs.table.refresh(true)
+      }
+      if (q.deliveryId) {
+        this.selectedDeliveryId = q.deliveryId
+        this.drawerVisible = true
+      }
+    },
     resetQuery () {
       this.queryParam = {
         partnerId: undefined,
         eventType: undefined,
-        status: undefined
+        status: undefined,
+        resourceId: undefined
       }
       this.$refs.table.refresh(true)
     },
-    statusColor (status) {
-      if (status === 'SUCCESS') return 'green'
-      if (status === 'FAILED') return 'red'
-      if (status === 'PENDING') return 'orange'
-      return 'default'
+    goInvocations (record) {
+      const link = resolveInvocationLinkQuery(record)
+      if (!link) return
+      this.$router.push({
+        name: 'InvocationList',
+        query: link
+      })
     },
+    openDetail (record) {
+      if (!record || record.id == null) return
+      this.selectedDeliveryId = record.id
+      this.drawerVisible = true
+    },
+    quickRetry (record) {
+      if (!record || record.id == null) return
+      this.$confirm({
+        title: '确认重试 Webhook 投递？',
+        content: `将复用 deliveryId=${record.id} 的报文再次 POST 到 callbackUrl。`,
+        onOk: () => {
+          return retryWebhookDelivery(record.id).then(data => {
+            const ok = data && data.status === 'SUCCESS'
+            this.$message.success(ok ? '重试成功' : `重试完成 · ${labelOf('webhookDeliveryStatus', data && data.status)}`)
+            this.$refs.table.refresh()
+          })
+        }
+      })
+    },
+    handleRetried () {
+      this.$refs.table.refresh()
+    },
+    formatHttpStatus,
+    httpStatusColor,
     formatDateTime (value) {
       if (!value) return '-'
       return this.$moment ? this.$moment(value).format('YYYY-MM-DD HH:mm:ss') : value
@@ -190,16 +305,18 @@ export default {
 
 .webhook-toolbar {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   align-items: center;
   margin-bottom: 10px;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
-.api-hint {
+.api-hint,
+.toolbar-note {
   color: rgba(0, 0, 0, 0.45);
   font-size: 12px;
   font-family: Consolas, monospace;
-  line-height: 32px;
 }
 
 @media (max-width: 1199px) {

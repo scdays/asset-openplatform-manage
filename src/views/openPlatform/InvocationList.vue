@@ -12,22 +12,40 @@
     <a-card :bordered="false" class="invocation-search-card">
       <a-form layout="vertical" class="invocation-search-form">
         <a-row :gutter="16" type="flex" align="bottom">
-          <a-col :xs="24" :sm="12" :xl="5">
+          <a-col :xs="24" :sm="12" :xl="4">
             <a-form-item label="partnerId">
               <a-input v-model="queryParam.partnerId" placeholder="请输入 partnerId" allow-clear />
             </a-form-item>
           </a-col>
-          <a-col :xs="24" :sm="12" :xl="5">
-            <a-form-item label="operationId">
-              <a-input v-model="queryParam.operationId" placeholder="例如 listTasks" allow-clear />
+          <a-col :xs="24" :sm="12" :xl="4">
+            <a-form-item label="业务域">
+              <a-select v-model="queryParam.domain" placeholder="全部" allow-clear>
+                <a-select-option
+                  v-for="item in domainFilterOptions"
+                  :key="item.value || 'all'"
+                  :value="item.value"
+                >
+                  {{ item.label }}
+                </a-select-option>
+              </a-select>
             </a-form-item>
           </a-col>
           <a-col :xs="24" :sm="12" :xl="4">
-            <a-form-item label="response_code">
-              <a-input-number v-model="queryParam.responseCode" :min="0" style="width: 100%;" placeholder="如 0/40301" />
+            <a-form-item label="operationId">
+              <a-input v-model="queryParam.operationId" placeholder="例如 verifyInstance" allow-clear />
             </a-form-item>
           </a-col>
-          <a-col :xs="24" :sm="12" :xl="6">
+          <a-col :xs="24" :sm="12" :xl="4">
+            <a-form-item label="resourceId">
+              <a-input v-model="queryParam.resourceId" placeholder="taskId / vulInfoID" allow-clear />
+            </a-form-item>
+          </a-col>
+          <a-col :xs="24" :sm="12" :xl="3">
+            <a-form-item label="响应码">
+              <a-input-number v-model="queryParam.responseCode" :min="0" style="width: 100%;" placeholder="如 0、40001" />
+            </a-form-item>
+          </a-col>
+          <a-col :xs="24" :sm="12" :xl="5">
             <a-form-item label="时间范围">
               <a-range-picker
                 v-model="queryRange"
@@ -52,6 +70,7 @@
     <a-card :bordered="false" class="invocation-table-card">
       <div class="invocation-list-toolbar">
         <span class="api-hint">GET /internal/admin/invocations</span>
+        <span class="toolbar-note">联调重点：instances 写操作 resourceId = vulInfoID</span>
       </div>
       <s-table
         ref="table"
@@ -64,45 +83,84 @@
         show-pagination="auto"
       >
         <span slot="serial" slot-scope="text, record, index">{{ index + 1 }}</span>
+        <span slot="domain" slot-scope="text">
+          <enum-tag type="domain" :value="text" />
+        </span>
+        <span slot="resourceId" slot-scope="text">
+          <code v-if="text">{{ text }}</code>
+          <span v-else>-</span>
+        </span>
         <span slot="responseCode" slot-scope="text">
-          <a-tag :color="text === 0 ? 'green' : 'red'">{{ text == null ? '-' : text }}</a-tag>
+          <response-code-tag :value="text" />
         </span>
         <span slot="latencyMs" slot-scope="text">{{ formatDuration(text) }}</span>
         <span slot="startedAt" slot-scope="text">{{ formatDateTime(text) }}</span>
-        <span slot="errorMessage" slot-scope="text">{{ text || '-' }}</span>
+        <span slot="action" slot-scope="text, record">
+          <a @click="goDetail(record)">详情</a>
+          <a-divider type="vertical" />
+          <a class="preview-link" @click="openPreview(record)">预览</a>
+        </span>
       </s-table>
     </a-card>
+
+    <invocation-preview-drawer
+      :visible="previewVisible"
+      :invocation-id="previewInvocationId"
+      @close="previewVisible = false"
+    />
   </div>
 </template>
 
 <script>
 import { STable } from '@/components'
+import EnumTag from '@/components/openPlatform/EnumTag'
+import ResponseCodeTag from '@/components/openPlatform/ResponseCodeTag'
+import { optionsOf } from '@/constants/openPlatformDisplay'
 import { listInvocations } from '@/api/openPlatform/invocation'
+import InvocationPreviewDrawer from './components/InvocationPreviewDrawer'
 
 const columns = [
   { title: '序号', scopedSlots: { customRender: 'serial' }, width: 60 },
-  { title: 'requestId', dataIndex: 'requestId', ellipsis: true, width: 220 },
-  { title: 'partnerId', dataIndex: 'partnerId', width: 160 },
-  { title: 'operationId', dataIndex: 'operationId', width: 150 },
-  { title: '请求路径', dataIndex: 'requestPath', ellipsis: true },
-  { title: 'code', dataIndex: 'responseCode', scopedSlots: { customRender: 'responseCode' }, width: 90 },
-  { title: '耗时', dataIndex: 'latencyMs', scopedSlots: { customRender: 'latencyMs' }, width: 90 },
-  { title: '开始时间', dataIndex: 'startedAt', scopedSlots: { customRender: 'startedAt' }, width: 180 },
-  { title: '失败原因', dataIndex: 'errorMessage', scopedSlots: { customRender: 'errorMessage' } }
+  { title: 'requestId', dataIndex: 'requestId', ellipsis: true, width: 200 },
+  { title: 'partnerId', dataIndex: 'partnerId', width: 140 },
+  { title: '业务域', dataIndex: 'domain', scopedSlots: { customRender: 'domain' }, width: 100 },
+  { title: 'operationId', dataIndex: 'operationId', width: 140 },
+  { title: 'resourceId', dataIndex: 'resourceId', scopedSlots: { customRender: 'resourceId' }, width: 140 },
+  { title: '响应码', dataIndex: 'responseCode', scopedSlots: { customRender: 'responseCode' }, width: 140 },
+  { title: '耗时', dataIndex: 'latencyMs', scopedSlots: { customRender: 'latencyMs' }, width: 80 },
+  { title: '开始时间', dataIndex: 'startedAt', scopedSlots: { customRender: 'startedAt' }, width: 170 },
+  { title: '操作', scopedSlots: { customRender: 'action' }, width: 120, fixed: 'right' }
 ]
+
+function buildQueryParamFromRoute (route) {
+  const q = (route && route.query) || {}
+  const pick = key => {
+    if (q[key] === undefined || q[key] === '') {
+      return undefined
+    }
+    return q[key]
+  }
+  return {
+    partnerId: pick('partnerId'),
+    domain: undefined,
+    operationId: undefined,
+    responseCode: undefined,
+    resourceId: pick('resourceId'),
+    resourceType: q.resourceId !== undefined ? undefined : pick('resourceType')
+  }
+}
 
 export default {
   name: 'InvocationList',
-  components: { STable },
+  components: { STable, EnumTag, ResponseCodeTag, InvocationPreviewDrawer },
   data () {
     return {
       columns,
-      queryParam: {
-        partnerId: undefined,
-        operationId: undefined,
-        responseCode: undefined
-      },
+      domainFilterOptions: optionsOf('domain', { includeAll: true }),
+      queryParam: buildQueryParamFromRoute(this.$route),
       queryRange: [],
+      previewVisible: false,
+      previewInvocationId: '',
       pagination: {
         pageSize: 10,
         showSizeChanger: true,
@@ -124,12 +182,64 @@ export default {
       }
     }
   },
+  mounted () {
+    this.syncRouteQuery()
+  },
+  activated () {
+    this.syncRouteQuery()
+  },
+  watch: {
+    '$route.query': {
+      handler () {
+        this.syncRouteQuery()
+      },
+      deep: true
+    }
+  },
   methods: {
+    syncRouteQuery () {
+      const nextQuery = buildQueryParamFromRoute(this.$route)
+      let changed = false
+      ;['partnerId', 'resourceId', 'resourceType'].forEach(key => {
+        if (nextQuery[key] !== this.queryParam[key]) {
+          changed = true
+        }
+      })
+      if (changed) {
+        this.queryParam = Object.assign({}, this.queryParam, {
+          partnerId: nextQuery.partnerId,
+          resourceId: nextQuery.resourceId,
+          resourceType: nextQuery.resourceType
+        })
+      }
+      const q = this.$route.query || {}
+      const hasLinkQuery = q.partnerId !== undefined || q.resourceId !== undefined
+      if (changed || hasLinkQuery) {
+        this.scheduleTableRefresh()
+      }
+    },
+    scheduleTableRefresh () {
+      const refreshTable = () => {
+        if (this.$refs.table) {
+          this.$refs.table.refresh(true)
+          return true
+        }
+        return false
+      }
+      this.$nextTick(() => {
+        if (!refreshTable()) {
+          this.$nextTick(refreshTable)
+        }
+      })
+    },
     resetQuery () {
       this.queryParam = {
         partnerId: undefined,
+        domain: undefined,
         operationId: undefined,
-        responseCode: undefined
+        responseCode: undefined,
+        resourceId: undefined,
+        resourceType: undefined
       }
       this.queryRange = []
       this.$refs.table.refresh(true)
@@ -143,6 +253,15 @@ export default {
         startedFrom: from ? from.format('YYYY-MM-DD HH:mm:ss') : undefined,
         startedTo: to ? to.format('YYYY-MM-DD HH:mm:ss') : undefined
       }
+    },
+    goDetail (record) {
+      if (!record || !record.invocationId) return
+      this.$router.push({ name: 'InvocationDetail', params: { invocationId: record.invocationId } })
+    },
+    openPreview (record) {
+      if (!record || !record.invocationId) return
+      this.previewInvocationId = record.invocationId
+      this.previewVisible = true
     },
     formatDuration (latencyMs) {
       if (latencyMs === undefined || latencyMs === null || latencyMs === '') {
@@ -211,16 +330,26 @@ export default {
 
 .invocation-list-toolbar {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   align-items: center;
   margin-bottom: 10px;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .api-hint {
   color: rgba(0, 0, 0, 0.45);
   font-size: 12px;
   font-family: Consolas, monospace;
-  line-height: 32px;
+}
+
+.toolbar-note {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+}
+
+.preview-link {
+  color: rgba(0, 0, 0, 0.45);
 }
 
 .invocation-list-page :deep(.ant-table-thead > tr > th) {

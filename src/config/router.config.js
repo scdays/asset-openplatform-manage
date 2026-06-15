@@ -36,6 +36,12 @@ export const asyncRouterMap = [
     meta: { title: '调用记录', keepAlive: true }
   },
   {
+    path: '/invocation/:invocationId',
+    name: 'InvocationDetail',
+    component: () => import('@/views/openPlatform/InvocationDetail'),
+    meta: { title: '调用详情' }
+  },
+  {
     path: '/webhook-log',
     name: 'WebhookDeliveryList',
     component: () => import('@/views/openPlatform/WebhookDeliveryList'),

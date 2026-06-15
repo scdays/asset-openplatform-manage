@@ -38,6 +38,39 @@ function normalizeListData (raw, defaultPage, defaultSize) {
   }
 }
 
+function normalizeCatalogItem (item) {
+  if (!item || typeof item !== 'object') {
+    return null
+  }
+  const tagRaw = item.openapiTag !== undefined && item.openapiTag !== null
+    ? item.openapiTag
+    : (item.tags !== undefined ? item.tags : item.tag)
+  let tags = []
+  if (Array.isArray(tagRaw)) {
+    tags = tagRaw
+  } else if (tagRaw !== undefined && tagRaw !== null && String(tagRaw).trim()) {
+    tags = String(tagRaw).split(',').map(v => v.trim()).filter(Boolean)
+  }
+  const method = (item.httpMethod || item.method || '').toUpperCase()
+  return {
+    operationId: item.operationId || item.code || item.operationCode || '-',
+    operationName: item.summary || item.operationName || item.name || item.description || '-',
+    capabilityCode: item.requiredCapability || item.capabilityCode || item.capability || '-',
+    status: item.status || item.state || 'UNKNOWN',
+    method: method || '-',
+    path: item.pathPattern || item.path || item.requestPath || item.route || '-',
+    tags,
+    domain: item.domain,
+    apiVersion: item.apiVersion,
+    publishedAt: item.publishedAt
+  }
+}
+
+function normalizeCatalogList (list) {
+  if (!Array.isArray(list)) return []
+  return list.map(normalizeCatalogItem).filter(Boolean)
+}
+
 function parseDocList (raw) {
   const source = raw || {}
   const list = source.items || source.list || source.records || source.rows || source.content || source.data || []
@@ -62,21 +95,17 @@ function buildCatalogFallback (params) {
     normalized.items.forEach(item => {
       const operationId = item.operationId || item.operationCode
       if (!operationId) return
-      const tagText = item.tags || item.tag || item.module
-      const tags = Array.isArray(tagText)
-        ? tagText
-        : (tagText ? String(tagText).split(',').map(v => v.trim()).filter(Boolean) : [])
       if (!map[operationId]) {
-        map[operationId] = {
+        map[operationId] = normalizeCatalogItem({
           operationId,
           operationName: item.operationName || operationId,
-          capabilityCode: item.capabilityCode || item.capability || '-',
+          requiredCapability: item.capabilityCode || item.capability || '-',
           status: item.status || 'UNKNOWN',
-          tags,
-          method: item.httpMethod || item.method || '-',
-          path: item.requestPath || item.path || '-',
+          openapiTag: item.tags || item.tag || item.module,
+          httpMethod: item.httpMethod || item.method || '-',
+          pathPattern: item.requestPath || item.path || '-',
           source: 'invocation-fallback'
-        }
+        })
       }
     })
     const allItems = Object.keys(map).map(key => map[key])
@@ -102,17 +131,21 @@ export function listApiCatalogOperations (params = {}) {
   const query = removeEmptyParams({
     page,
     size,
-    capabilityCode: params.capabilityCode,
+    requiredCapability: params.capabilityCode || params.requiredCapability,
     status: params.status,
-    tag: params.tag,
-    keyword: params.keyword
+    openapiTag: params.tag || params.openapiTag,
+    keyword: params.keyword,
+    domain: params.domain
   })
   return openApiRequest.get(API_OPERATION_PREFIX, {
     params: query,
     silent: true
   }).then(data => {
     const normalized = normalizeListData(data, page, size)
-    return Object.assign({}, normalized, { fallback: false })
+    return Object.assign({}, normalized, {
+      items: normalizeCatalogList(normalized.items),
+      fallback: false
+    })
   }).catch(() => buildCatalogFallback(params))
 }
 

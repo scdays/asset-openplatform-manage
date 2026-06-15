@@ -12,10 +12,10 @@
           <div>
             <div class="detail-title">
               {{ partner.partnerName }}
-              <a-tag :color="partner.status === 'ACTIVE' ? 'green' : 'red'">{{ partner.status }}</a-tag>
+              <enum-tag type="partnerStatus" :value="partner.status" />
             </div>
             <div class="detail-meta">
-              partnerId: {{ partner.partnerId }} · {{ partner.partnerType }} · QPS {{ partner.rateLimitQps == null ? '不限' : partner.rateLimitQps }}
+              partnerId: {{ partner.partnerId }} · {{ partnerTypeLabel }} · QPS {{ partner.rateLimitQps == null ? '不限' : partner.rateLimitQps }}
             </div>
           </div>
           <div class="detail-actions">
@@ -29,8 +29,8 @@
             <a-descriptions bordered :column="2" size="small">
               <a-descriptions-item label="partnerId">{{ partner.partnerId }}</a-descriptions-item>
               <a-descriptions-item label="partnerName">{{ partner.partnerName }}</a-descriptions-item>
-              <a-descriptions-item label="partnerType">{{ partner.partnerType }}</a-descriptions-item>
-              <a-descriptions-item label="status">{{ partner.status }}</a-descriptions-item>
+              <a-descriptions-item label="接入方类型"><enum-tag type="partnerType" :value="partner.partnerType" /></a-descriptions-item>
+              <a-descriptions-item label="状态"><enum-tag type="partnerStatus" :value="partner.status" /></a-descriptions-item>
               <a-descriptions-item label="rateLimitQps" :span="2">
                 {{ partner.rateLimitQps == null ? '不限' : partner.rateLimitQps }}
               </a-descriptions-item>
@@ -56,8 +56,9 @@
               :pagination="false"
               size="small"
             >
+              <span slot="clientId" slot-scope="text"><code>{{ text }}</code></span>
               <span slot="status" slot-scope="text">
-                <a-tag :color="text === 'ACTIVE' ? 'green' : 'default'">{{ text }}</a-tag>
+                <enum-tag type="credentialStatus" :value="text" />
               </span>
               <span slot="createdAt" slot-scope="text">{{ text | moment('YYYY-MM-DD HH:mm') }}</span>
             </a-table>
@@ -87,7 +88,14 @@
                 :pagination="false"
                 size="small"
                 class="stats-table"
-              />
+              >
+                <span slot="responseCode" slot-scope="text">
+                  <response-code-tag :value="text" />
+                </span>
+                <span slot="meaning" slot-scope="text, record">
+                  {{ responseCodeLabel(record.responseCode) }}
+                </span>
+              </a-table>
 
               <a-table
                 row-key="date"
@@ -112,9 +120,12 @@
                 size="small"
               >
                 <span slot="status" slot-scope="text">
-                  <a-tag :color="webhookStatusColor(text)">{{ text || '-' }}</a-tag>
+                  <enum-tag type="webhookDeliveryStatus" :value="text" />
                 </span>
-                <span slot="httpStatus" slot-scope="text">{{ text == null ? '-' : text }}</span>
+                <span slot="eventType" slot-scope="text">
+                  <enum-tag type="webhookEventType" :value="text" />
+                </span>
+                <span slot="httpStatus" slot-scope="text">{{ formatHttpStatus(text) }}</span>
                 <span slot="createdAt" slot-scope="text">{{ formatDateTime(text) }}</span>
               </a-table>
               <p class="field-helper" style="margin-top: 8px;">GET /internal/admin/webhook-deliveries?partnerId={partnerId}</p>
@@ -147,15 +158,20 @@ import { getPartner, listCredentials } from '@/api/partner'
 import { getPartnerStats, listWebhookDeliveries } from '@/api/openPlatform/invocation'
 import CapabilityCheckboxGroup from './components/CapabilityCheckboxGroup'
 import CredentialCreateModal from './components/CredentialCreateModal'
+import EnumTag from '@/components/openPlatform/EnumTag'
+import ResponseCodeTag from '@/components/openPlatform/ResponseCodeTag'
+import { labelOf, responseCodeLabel, formatHttpStatus } from '@/constants/openPlatformDisplay'
 
 const credentialColumns = [
-  { title: 'clientId', dataIndex: 'clientId' },
-  { title: '状态', dataIndex: 'status', scopedSlots: { customRender: 'status' } },
-  { title: '创建时间', dataIndex: 'createdAt', scopedSlots: { customRender: 'createdAt' } }
+  { title: 'clientId', dataIndex: 'clientId', scopedSlots: { customRender: 'clientId' }, ellipsis: true },
+  { title: 'credentialId', dataIndex: 'id', customRender: text => (text != null ? `cred-${text}` : '-') },
+  { title: '状态', dataIndex: 'status', scopedSlots: { customRender: 'status' }, width: 100 },
+  { title: '创建时间', dataIndex: 'createdAt', scopedSlots: { customRender: 'createdAt' }, width: 170 }
 ]
 
 const errorCodeColumns = [
-  { title: 'Top 错误码', dataIndex: 'responseCode', width: 160 },
+  { title: '错误码', dataIndex: 'responseCode', scopedSlots: { customRender: 'responseCode' }, width: 180 },
+  { title: '含义', scopedSlots: { customRender: 'meaning' }, width: 160 },
   { title: '次数', dataIndex: 'count', width: 120 }
 ]
 
@@ -168,7 +184,7 @@ const trendColumns = [
 ]
 
 const webhookColumns = [
-  { title: 'eventType', dataIndex: 'eventType', width: 180 },
+  { title: '事件类型', dataIndex: 'eventType', scopedSlots: { customRender: 'eventType' }, width: 180 },
   { title: 'callbackUrl', dataIndex: 'callbackUrl', ellipsis: true },
   { title: 'HTTP', dataIndex: 'httpStatus', scopedSlots: { customRender: 'httpStatus' }, width: 90 },
   { title: '重试次数', dataIndex: 'retryCount', width: 110 },
@@ -180,7 +196,9 @@ export default {
   name: 'PartnerDetail',
   components: {
     CapabilityCheckboxGroup,
-    CredentialCreateModal
+    CredentialCreateModal,
+    EnumTag,
+    ResponseCodeTag
   },
   data () {
     return {
@@ -199,6 +217,11 @@ export default {
       errorCodeColumns,
       trendColumns,
       webhookColumns
+    }
+  },
+  computed: {
+    partnerTypeLabel () {
+      return labelOf('partnerType', this.partner.partnerType, this.partner.partnerType)
     }
   },
   created () {
@@ -282,12 +305,8 @@ export default {
       if (numberValue > 1) return `${numberValue.toFixed(2)}%`
       return `${(numberValue * 100).toFixed(2)}%`
     },
-    webhookStatusColor (status) {
-      if (status === 'SUCCESS') return 'green'
-      if (status === 'FAILED') return 'red'
-      if (status === 'PENDING') return 'orange'
-      return 'default'
-    },
+    responseCodeLabel,
+    formatHttpStatus,
     formatDateTime (value) {
       if (!value) return '-'
       if (this.$moment) {

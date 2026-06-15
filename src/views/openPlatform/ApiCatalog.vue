@@ -14,13 +14,12 @@
           <a-col :xs="24" :sm="12" :xl="6">
             <a-form-item label="能力码">
               <a-select v-model="queryParam.capabilityCode" placeholder="全部" allow-clear>
-                <a-select-option value="">全部</a-select-option>
                 <a-select-option
-                  v-for="item in capabilityOptions"
-                  :key="item.code"
-                  :value="item.code"
+                  v-for="item in capabilityFilterOptions"
+                  :key="item.value || 'all'"
+                  :value="item.value"
                 >
-                  {{ item.code }}
+                  {{ item.label }}
                 </a-select-option>
               </a-select>
             </a-form-item>
@@ -28,16 +27,27 @@
           <a-col :xs="24" :sm="12" :xl="4">
             <a-form-item label="状态">
               <a-select v-model="queryParam.status" placeholder="全部" allow-clear>
-                <a-select-option value="">全部</a-select-option>
-                <a-select-option value="ACTIVE">ACTIVE</a-select-option>
-                <a-select-option value="DISABLED">DISABLED</a-select-option>
-                <a-select-option value="UNKNOWN">UNKNOWN</a-select-option>
+                <a-select-option
+                  v-for="item in apiStatusFilterOptions"
+                  :key="item.value || 'all'"
+                  :value="item.value"
+                >
+                  {{ item.label }}
+                </a-select-option>
               </a-select>
             </a-form-item>
           </a-col>
           <a-col :xs="24" :sm="12" :xl="4">
-            <a-form-item label="Tag">
-              <a-input v-model="queryParam.tag" placeholder="如 task,event" allow-clear />
+            <a-form-item label="OpenAPI Tag">
+              <a-select v-model="queryParam.tag" placeholder="全部" allow-clear>
+                <a-select-option
+                  v-for="item in tagFilterOptions"
+                  :key="item.value || 'all'"
+                  :value="item.value"
+                >
+                  {{ item.label }}
+                </a-select-option>
+              </a-select>
             </a-form-item>
           </a-col>
           <a-col :xs="24" :sm="12" :xl="6">
@@ -78,16 +88,16 @@
         <span slot="operationId" slot-scope="text">{{ text || '-' }}</span>
         <span slot="operationName" slot-scope="text">{{ text || '-' }}</span>
         <span slot="capabilityCode" slot-scope="text">
-          <a-tag color="blue">{{ text ? capabilityLabel(text) : '-' }}</a-tag>
+          <enum-tag type="capability" :value="text" />
         </span>
         <span slot="status" slot-scope="text">
-          <a-tag :color="statusColor(text)">{{ text || '-' }}</a-tag>
+          <enum-tag type="apiOperationStatus" :value="text" />
         </span>
         <span slot="method" slot-scope="text">
-          <a-tag :color="methodColor(text)">{{ text || '-' }}</a-tag>
+          <enum-tag type="httpMethod" :value="text" />
         </span>
         <span slot="path" slot-scope="text">{{ text || '-' }}</span>
-        <span slot="tags" slot-scope="text">{{ formatTags(text) }}</span>
+        <span slot="tags" slot-scope="text">{{ formatTagList(text) }}</span>
       </s-table>
     </a-card>
   </div>
@@ -95,7 +105,8 @@
 
 <script>
 import { STable } from '@/components'
-import { OPEN_PLATFORM_CAPABILITIES, capabilityLabel } from '@/constants/openPlatformCapabilities'
+import EnumTag from '@/components/openPlatform/EnumTag'
+import { formatTags, optionsOf } from '@/constants/openPlatformDisplay'
 import { listApiCatalogOperations } from '@/api/openPlatform/catalog'
 
 const columns = [
@@ -111,11 +122,13 @@ const columns = [
 
 export default {
   name: 'ApiCatalog',
-  components: { STable },
+  components: { STable, EnumTag },
   data () {
     return {
       columns,
-      capabilityOptions: OPEN_PLATFORM_CAPABILITIES,
+      capabilityFilterOptions: optionsOf('capability', { includeAll: true }),
+      apiStatusFilterOptions: optionsOf('apiOperationStatus', { includeAll: true }),
+      tagFilterOptions: optionsOf('openapiTag', { includeAll: true }),
       usingFallback: false,
       queryParam: {
         capabilityCode: undefined,
@@ -136,13 +149,7 @@ export default {
         return listApiCatalogOperations(params).then(data => {
           const items = ((data && data.items) || []).map((item, index) => ({
             rowKey: `${item.operationId || 'op'}-${page}-${index}`,
-            operationId: item.operationId || item.code || item.operationCode || '-',
-            operationName: item.operationName || item.name || item.summary || item.description || '-',
-            capabilityCode: item.capabilityCode || item.capability || item.capability_code || '-',
-            status: item.status || item.state || 'UNKNOWN',
-            method: (item.method || item.httpMethod || '').toUpperCase() || '-',
-            path: item.path || item.requestPath || item.route || '-',
-            tags: item.tags || item.tag || []
+            ...item
           }))
           this.usingFallback = !!(data && data.fallback)
           return {
@@ -155,7 +162,7 @@ export default {
     }
   },
   methods: {
-    capabilityLabel,
+    formatTagList: formatTags,
     resetQuery () {
       this.queryParam = {
         capabilityCode: undefined,
@@ -165,23 +172,6 @@ export default {
       }
       this.$refs.table.refresh(true)
     },
-    formatTags (tags) {
-      if (!tags || (Array.isArray(tags) && !tags.length)) return '-'
-      if (Array.isArray(tags)) return tags.join(', ')
-      return String(tags)
-    },
-    statusColor (status) {
-      if (status === 'ACTIVE') return 'green'
-      if (status === 'DISABLED') return 'red'
-      return 'orange'
-    },
-    methodColor (method) {
-      if (method === 'GET') return 'green'
-      if (method === 'POST') return 'blue'
-      if (method === 'PUT') return 'gold'
-      if (method === 'DELETE') return 'red'
-      return 'default'
-    }
   }
 }
 </script>

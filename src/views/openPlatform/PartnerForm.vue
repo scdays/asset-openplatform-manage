@@ -34,10 +34,15 @@
               </a-select-option>
             </a-select>
           </a-form-model-item>
-          <a-form-model-item v-if="isEdit" label="status" prop="status">
+          <a-form-model-item v-if="isEdit" label="状态" prop="status">
             <a-select v-model="form.status">
-              <a-select-option value="ACTIVE">ACTIVE</a-select-option>
-              <a-select-option value="DISABLED">DISABLED</a-select-option>
+              <a-select-option
+                v-for="item in partnerStatusOptions"
+                :key="item.value"
+                :value="item.value"
+              >
+                {{ item.label }}
+              </a-select-option>
             </a-select>
           </a-form-model-item>
           <a-form-model-item label="rateLimitQps" prop="rateLimitQps">
@@ -72,7 +77,7 @@
 
 <script>
 import { getPartner, createPartner, updatePartner } from '@/api/partner'
-import { PARTNER_TYPES } from '@/constants/openPlatformCapabilities'
+import { PARTNER_TYPES, optionsOf } from '@/constants/openPlatformDisplay'
 import CapabilityCheckboxGroup from './components/CapabilityCheckboxGroup'
 
 export default {
@@ -81,6 +86,7 @@ export default {
   data () {
     return {
       partnerTypes: PARTNER_TYPES,
+      partnerStatusOptions: optionsOf('partnerStatus'),
       loading: false,
       submitting: false,
       form: {

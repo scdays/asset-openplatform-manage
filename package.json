@@ -5,7 +5,8 @@
   "port": 13021,
   "scripts": {
     "serve": "node scripts/run-vue-cli.js serve",
-    "build": "node scripts/run-vue-cli.js build",
+    "verify:utf8": "node scripts/verify-utf8.js",
+    "build": "node scripts/verify-utf8.js && node scripts/run-vue-cli.js build",
     "lint": "vue-cli-service lint",
     "lint:nofix": "vue-cli-service lint --no-fix"
   },

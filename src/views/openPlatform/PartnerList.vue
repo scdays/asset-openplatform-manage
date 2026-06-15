@@ -25,9 +25,13 @@
           <a-col :xs="24" :sm="12" :xl="6">
             <a-form-item label="状态">
               <a-select v-model="queryParam.status" placeholder="全部" allow-clear>
-                <a-select-option value="">全部</a-select-option>
-                <a-select-option value="ACTIVE">ACTIVE</a-select-option>
-                <a-select-option value="DISABLED">DISABLED</a-select-option>
+                <a-select-option
+                  v-for="item in statusFilterOptions"
+                  :key="item.value || 'all'"
+                  :value="item.value"
+                >
+                  {{ item.label }}
+                </a-select-option>
               </a-select>
             </a-form-item>
           </a-col>
@@ -63,10 +67,10 @@
           <a @click="goDetail(text)">{{ text }}</a>
         </span>
         <span slot="partnerType" slot-scope="text">
-          <a-tag color="blue">{{ text || '-' }}</a-tag>
+          <enum-tag type="partnerType" :value="text" />
         </span>
         <span slot="status" slot-scope="text">
-          <a-tag :color="text === 'ACTIVE' ? 'green' : 'red'">{{ text }}</a-tag>
+          <enum-tag type="partnerStatus" :value="text" />
         </span>
         <span slot="capabilities" slot-scope="text">
           {{ formatCapabilities(text) }}
@@ -83,8 +87,9 @@
 
 <script>
 import { STable } from '@/components'
+import EnumTag from '@/components/openPlatform/EnumTag'
 import { listPartners } from '@/api/partner'
-import { capabilityLabel } from '@/constants/openPlatformCapabilities'
+import { capabilityLabel, optionsOf } from '@/constants/openPlatformDisplay'
 
 const columns = [
   { title: '序号', scopedSlots: { customRender: 'serial' }, width: 60 },
@@ -99,10 +104,11 @@ const columns = [
 
 export default {
   name: 'PartnerList',
-  components: { STable },
+  components: { STable, EnumTag },
   data () {
     return {
       columns,
+      statusFilterOptions: optionsOf('partnerStatus', { includeAll: true }),
       queryParam: {
         partnerId: undefined,
         partnerName: undefined,
@@ -142,7 +148,7 @@ export default {
     },
     formatCapabilities (caps) {
       if (!caps || !caps.length) return '-'
-      return caps.map(c => capabilityLabel(c).split(' ')[0]).join('、')
+      return caps.map(c => capabilityLabel(c)).join('、')
     },
     resetQuery () {
       this.queryParam = {

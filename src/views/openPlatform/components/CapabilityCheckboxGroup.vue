@@ -10,7 +10,7 @@
         :key="item.code"
         class="capability-checkbox-item"
       >
-        <a-checkbox :value="item.code">{{ item.code }}</a-checkbox>
+        <a-checkbox :value="item.code">{{ item.label }}</a-checkbox>
       </div>
     </div>
   </a-checkbox-group>
