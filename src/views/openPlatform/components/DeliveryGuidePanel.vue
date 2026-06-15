@@ -20,7 +20,6 @@
 
 <script>
 import {
-  buildDeliveryGuideText,
   getPartnerApiBaseUrl,
   getPartnerPublicBaseUrl,
   getPartnerTokenUrl
@@ -52,12 +51,25 @@ export default {
     },
     taskCurlPreview () {
       return `curl -X POST "${getPartnerApiBaseUrl()}/tasks/vul" \\\n  -H "Authorization: Bearer {token}" \\\n  -H "Content-Type: application/json" \\\n  -d '{"extTaskId":"demo-001","taskName":"联调任务"}'`
+    },
+    fullGuideText () {
+      return [
+        '第三方接入说明',
+        '',
+        '1. 获取 Token',
+        this.tokenCurlPreview,
+        '',
+        '2. 创建任务（JSON 示例）',
+        this.taskCurlPreview,
+        '',
+        '3. 联调环境',
+        `公网入口：${this.publicBase}。后端 mock 模式时实例数据来自 fixture，运营在「调用记录」观测。`
+      ].join('\n')
     }
   },
   methods: {
     copyGuide () {
-      const text = buildDeliveryGuideText(this.clientId, this.clientSecret)
-      this.copyText(text, '接入说明')
+      this.copyText(this.fullGuideText, '接入说明')
     },
     copyText (text, label) {
       if (!text) {

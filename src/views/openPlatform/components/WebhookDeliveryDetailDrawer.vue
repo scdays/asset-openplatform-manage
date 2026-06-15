@@ -21,6 +21,18 @@
               </template>
               <span v-else>-</span>
             </span></div>
+            <template v-if="detail.eventType === 'EXPORT_READY'">
+              <div class="kv-row"><span class="k">exportId</span><span class="v"><code>{{ detail.exportId || '-' }}</code></span></div>
+              <div class="kv-row"><span class="k">外发格式</span><span class="v">{{ detail.exportFormat || '-' }}</span></div>
+              <div class="kv-row"><span class="k">外发阶段</span><span class="v">{{ detail.exportStage || '-' }}</span></div>
+              <div class="kv-row"><span class="k">Partner downloadUrl</span><span class="v"><code>{{ detail.partnerDownloadUrl || '-' }}</code></span></div>
+              <div v-if="canDownloadExport(detail)" class="export-download-bar">
+                <a-button type="primary" icon="download" :loading="downloading" @click="handleDownloadExport">
+                  下载外发文件
+                </a-button>
+                <span class="helper">GET /internal/admin/exports/{{exportId}}/download</span>
+              </div>
+            </template>
             <div class="kv-row"><span class="k">callbackUrl</span><span class="v">{{ detail.callbackUrl }}</span></div>
             <div class="kv-row"><span class="k">HTTP</span><span class="v"><a-tag :color="httpStatusColor(detail.httpStatus)">{{ formatHttpStatus(detail.httpStatus) }}</a-tag></span></div>
             <div class="kv-row"><span class="k">状态</span><span class="v"><enum-tag type="webhookDeliveryStatus" :value="detail.status" /></span></div>
@@ -49,7 +61,7 @@
             </a-table>
           </a-tab-pane>
           <a-tab-pane key="invocations" tab="关联调用">
-            <p class="helper">按 partnerId + resourceId 查询调用治理中同资源 API 调用（近 10 条）</p>
+            <p class="helper">按 partnerId + resourceId 查询调用治理中同源 API 调用（近 10 条）</p>
             <a-table
               size="small"
               row-key="invocationId"
@@ -71,6 +83,15 @@
 
     <div class="drawer-footer">
       <a-button
+        v-if="canDownloadExport(detail)"
+        type="primary"
+        icon="download"
+        :loading="downloading"
+        @click="handleDownloadExport"
+      >
+        下载外发
+      </a-button>
+      <a-button
         v-if="canRetry"
         type="primary"
         :loading="retrying"
@@ -88,6 +109,7 @@ import { getWebhookDeliveryDetail, retryWebhookDelivery } from '@/api/openPlatfo
 import EnumTag from '@/components/openPlatform/EnumTag'
 import ResponseCodeTag from '@/components/openPlatform/ResponseCodeTag'
 import { resolveInvocationLinkQuery } from '@/utils/openPlatformLink'
+import { canDownloadExportDelivery, triggerExportDownload } from '@/utils/webhookExport'
 import { formatHttpStatus, httpStatusColor, labelOf } from '@/constants/openPlatformDisplay'
 
 const historyColumns = [
@@ -124,6 +146,7 @@ export default {
     return {
       loading: false,
       retrying: false,
+      downloading: false,
       detail: null,
       activeTab: 'summary',
       historyColumns,
@@ -157,6 +180,7 @@ export default {
     }
   },
   methods: {
+    canDownloadExport: canDownloadExportDelivery,
     loadDetail () {
       if (this.deliveryId == null || this.deliveryId === '') {
         this.detail = null
@@ -170,6 +194,15 @@ export default {
         this.$message.error((err && err.message) || '加载 Webhook 投递详情失败')
       }).finally(() => {
         this.loading = false
+      })
+    },
+    handleDownloadExport () {
+      if (!canDownloadExportDelivery(this.detail) || this.downloading) return
+      this.downloading = true
+      triggerExportDownload(this.detail).catch(err => {
+        this.$message.error((err && err.message) || '下载外发文件失败')
+      }).finally(() => {
+        this.downloading = false
       })
     },
     handleRetry () {
@@ -262,6 +295,17 @@ export default {
 
 .link-btn {
   margin-left: 8px;
+}
+
+.export-download-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0 16px;
+  padding: 12px;
+  background: #f6ffed;
+  border: 1px solid #b7eb8f;
+  border-radius: 2px;
 }
 
 .helper {

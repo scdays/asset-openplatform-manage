@@ -25,6 +25,37 @@ openApiRequest.interceptors.request.use(config => {
 
 openApiRequest.interceptors.response.use(
   response => {
+    const config = response.config || {}
+    if (config.responseType === 'blob') {
+      const contentType = (response.headers && response.headers['content-type']) || ''
+      if (contentType.indexOf('application/json') >= 0 && response.data instanceof Blob) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onload = () => {
+            try {
+              const res = JSON.parse(reader.result)
+              const silent = config.silent
+              if (res.code !== 0) {
+                if (!silent) {
+                  notification.error({
+                    message: '请求失败',
+                    description: res.message || `错误码 ${res.code}`
+                  })
+                }
+                reject(new Error(res.message || 'Error'))
+              } else {
+                resolve(res.data)
+              }
+            } catch (e) {
+              resolve(response)
+            }
+          }
+          reader.onerror = () => resolve(response)
+          reader.readAsText(response.data)
+        })
+      }
+      return response
+    }
     const res = response.data
     const silent = response && response.config && response.config.silent
     if (res == null || typeof res.code === 'undefined') {
