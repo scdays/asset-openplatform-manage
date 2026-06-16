@@ -1,7 +1,8 @@
 <template>
   <a-tag
     v-if="hasValue"
-    :color="tagColor"
+    :color="tagColor === 'default' ? undefined : tagColor"
+    :class="{ 'enum-tag-default': tagColor === 'default' }"
     :title="showTooltip ? rawValue : undefined"
   >
     {{ displayLabel }}
@@ -55,6 +56,12 @@ export default {
 
 <style scoped>
 .enum-tag-empty {
-  color: rgba(0, 0, 0, 0.25);
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.enum-tag-default {
+  color: rgba(0, 0, 0, 0.75) !important;
+  background: #fafafa !important;
+  border: 1px solid #d9d9d9 !important;
 }
 </style>

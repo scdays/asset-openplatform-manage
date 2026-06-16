@@ -61,7 +61,8 @@ export const CAPABILITIES = [
 export const WEBHOOK_DELIVERY_STATUSES = [
   { value: 'SUCCESS', label: '投递成功', color: 'green' },
   { value: 'FAILED', label: '投递失败', color: 'red' },
-  { value: 'PENDING', label: '待投递', color: 'orange' }
+  { value: 'PENDING', label: '待投递', color: 'orange' },
+  { value: 'SKIPPED', label: '已跳过', color: 'orange' }
 ]
 
 export const WEBHOOK_EVENT_TYPES = [

@@ -39,6 +39,10 @@ export function getInvocationResponseBody (invocationId) {
   return openApiRequest.get(`${INVOCATION_PREFIX}/${encodeURIComponent(invocationId)}/response-body`)
 }
 
+export function getInvocationRequestBody (invocationId) {
+  return openApiRequest.get(`${INVOCATION_PREFIX}/${encodeURIComponent(invocationId)}/request-body`)
+}
+
 export function getPartnerStats (partnerId) {
   return openApiRequest.get(`${PARTNER_PREFIX}/${encodeURIComponent(partnerId)}/stats`)
 }

@@ -330,9 +330,18 @@ export default {
 
 .api-hint,
 .toolbar-note {
-  color: rgba(0, 0, 0, 0.45);
+  color: rgba(0, 0, 0, 0.55);
   font-size: 12px;
   font-family: Consolas, monospace;
+}
+
+.webhook-table-card code {
+  color: rgba(0, 0, 0, 0.85);
+  background: #f5f5f5;
+  border: 1px solid #e8e8e8;
+  padding: 0 4px;
+  border-radius: 2px;
+  font-size: 12px;
 }
 
 @media (max-width: 1199px) {

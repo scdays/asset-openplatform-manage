@@ -95,55 +95,67 @@
           </a-card>
         </a-col>
       </a-row>
-
-      <a-card title="导入 NSFocus XML" :bordered="false" class="mock-section-card" style="margin-top: 16px;">
-        <div class="mock-upload-row">
-          <a-upload
-            :before-upload="beforeUpload"
-            :file-list="fileList"
-            :remove="onRemoveFile"
-            accept=".xml,application/xml,text/xml"
-          >
-            <a-button icon="upload">选择 XML 报告</a-button>
-          </a-upload>
-          <a-checkbox v-model="forceReimport" :disabled="!bundleStatus || !bundleStatus.instancesIngested">
-            强制重导（清除已入库实例）
-          </a-checkbox>
-        </div>
-        <div class="mock-actions">
-          <a-button :disabled="!uploadFile" :loading="previewing" @click="handlePreview">
-            预览解析
-          </a-button>
-          <a-button
-            type="primary"
-            :disabled="!uploadFile"
-            :loading="importing"
-            @click="handleImport"
-          >
-            确认导入并触发 FINISHED
-          </a-button>
-        </div>
-        <div class="api-hint">POST /internal/admin/mock-tasks/{taskId}/preview-report · import-report</div>
-
-        <a-alert
-          v-if="previewResult"
-          type="info"
-          show-icon
-          style="margin-top: 12px;"
-          :message="previewMessage"
-        />
-
-        <a-table
-          v-if="previewResult && previewResult.samples && previewResult.samples.length"
-          size="small"
-          row-key="vulNetAddr"
-          style="margin-top: 12px;"
-          :pagination="false"
-          :columns="previewColumns"
-          :data-source="previewResult.samples"
-        />
-      </a-card>
     </template>
+
+    <a-card
+      title="导入 NSFocus XML"
+      :bordered="false"
+      class="mock-section-card"
+      style="margin-top: 16px;"
+    >
+      <a-alert
+        v-if="!dispatch"
+        type="info"
+        show-icon
+        message="请先输入 taskId 并点「加载任务」"
+        style="margin-bottom: 12px;"
+      />
+
+      <div class="mock-upload-row">
+        <input
+          ref="fileInput"
+          type="file"
+          accept=".xml,application/xml,text/xml"
+          class="mock-file-input"
+          @change="onNativeFileChange"
+        />
+        <a-button icon="upload" @click="openFilePicker">选择 XML 报告</a-button>
+        <span v-if="selectedFileName" class="mock-file-name">{{ selectedFileName }}</span>
+        <a-button v-if="uploadFile" type="link" size="small" @click="clearFile">清除</a-button>
+        <a-checkbox
+          v-model="forceReimport"
+          :disabled="!bundleStatus || !bundleStatus.instancesIngested"
+        >
+          强制重导（清除已入库实例）
+        </a-checkbox>
+      </div>
+
+      <div class="mock-actions">
+        <a-button :loading="previewing" @click="handlePreview">预览解析</a-button>
+        <a-button type="primary" :loading="importing" @click="handleImport">
+          确认导入并触发 FINISHED
+        </a-button>
+      </div>
+      <div class="api-hint">POST /internal/admin/mock-tasks/{taskId}/preview-report · import-report</div>
+
+      <a-alert
+        v-if="previewResult"
+        type="info"
+        show-icon
+        style="margin-top: 12px;"
+        :message="previewMessage"
+      />
+
+      <a-table
+        v-if="previewResult && previewResult.samples && previewResult.samples.length"
+        size="small"
+        row-key="vulNetAddr"
+        style="margin-top: 12px;"
+        :pagination="false"
+        :columns="previewColumns"
+        :data-source="previewResult.samples"
+      />
+    </a-card>
   </div>
 </template>
 
@@ -154,7 +166,8 @@ import {
   getBundleStatus,
   getDispatchPacket,
   importMockReport,
-  previewMockReport
+  previewMockReport,
+  resolveUploadFile
 } from '@/api/openPlatform/mockTask'
 
 export default {
@@ -169,7 +182,7 @@ export default {
       dispatch: null,
       bundleStatus: null,
       uploadFile: null,
-      fileList: [],
+      selectedFileName: '',
       forceReimport: false,
       previewResult: null,
       previewColumns: [
@@ -199,6 +212,51 @@ export default {
     }
   },
   methods: {
+    openFilePicker () {
+      const input = this.$refs.fileInput
+      if (input) {
+        input.click()
+      }
+    },
+    onNativeFileChange (event) {
+      const file = event.target && event.target.files && event.target.files[0]
+      if (!file) return
+      const name = (file.name || '').toLowerCase()
+      if (!name.endsWith('.xml')) {
+        this.$message.warning('请选择 .xml 格式的报告文件')
+        this.clearFile()
+        return
+      }
+      this.uploadFile = file
+      this.selectedFileName = file.name
+      this.previewResult = null
+    },
+    clearFile () {
+      this.uploadFile = null
+      this.selectedFileName = ''
+      this.previewResult = null
+      const input = this.$refs.fileInput
+      if (input) {
+        input.value = ''
+      }
+    },
+    ensureImportReady () {
+      const taskId = (this.taskIdInput || '').trim()
+      if (!taskId) {
+        this.$message.warning('请输入 taskId')
+        return null
+      }
+      if (!this.dispatch) {
+        this.$message.warning('请先点「加载任务」确认任务存在')
+        return null
+      }
+      const file = resolveUploadFile(this.uploadFile)
+      if (!file) {
+        this.$message.warning('请先选择 XML 报告文件')
+        return null
+      }
+      return { taskId, file }
+    },
     async loadTask () {
       const taskId = (this.taskIdInput || '').trim()
       if (!taskId) {
@@ -222,41 +280,30 @@ export default {
         this.loading = false
       }
     },
-    beforeUpload (file) {
-      this.uploadFile = file
-      this.fileList = [file]
-      this.previewResult = null
-      return false
-    },
-    onRemoveFile () {
-      this.uploadFile = null
-      this.fileList = []
-      this.previewResult = null
-      return true
-    },
     async handlePreview () {
-      const taskId = (this.taskIdInput || '').trim()
-      if (!taskId || !this.uploadFile) return
+      const ctx = this.ensureImportReady()
+      if (!ctx) return
       this.previewing = true
       try {
-        this.previewResult = await previewMockReport(taskId, this.uploadFile, 10)
+        this.previewResult = await previewMockReport(ctx.taskId, ctx.file, 10)
         this.$message.success('预览完成')
       } finally {
         this.previewing = false
       }
     },
     async handleImport () {
-      const taskId = (this.taskIdInput || '').trim()
-      if (!taskId || !this.uploadFile) return
+      const ctx = this.ensureImportReady()
+      if (!ctx) return
       if (this.bundleStatus && this.bundleStatus.instancesIngested && !this.forceReimport) {
         this.$message.warning('实例已入库，请勾选「强制重导」或更换 taskId')
         return
       }
       this.importing = true
       try {
-        const result = await importMockReport(taskId, this.uploadFile, this.forceReimport)
+        const result = await importMockReport(ctx.taskId, ctx.file, this.forceReimport)
         const ingestLabel = result.instancesIngested ? '\u6210\u529f' : '\u672a\u5b8c\u6210'
         this.$message.success('\u5bfc\u5165\u6210\u529f\uff1a' + result.instanceCount + ' \u6761\u5b9e\u4f8b\uff0c\u5165\u5e93 ' + ingestLabel)
+        this.clearFile()
         await this.loadTask()
       } finally {
         this.importing = false
@@ -286,6 +333,19 @@ export default {
 .dir-code {
   font-size: 12px;
   word-break: break-all;
+}
+
+.mock-file-input {
+  display: none;
+}
+
+.mock-file-name {
+  color: rgba(0, 0, 0, 0.65);
+  font-size: 13px;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .mock-upload-row {

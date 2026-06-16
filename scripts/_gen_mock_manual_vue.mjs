@@ -102,55 +102,67 @@ const content = `<template>
           </a-card>
         </a-col>
       </a-row>
-
-      <a-card title="\u5bfc\u5165 NSFocus XML" :bordered="false" class="mock-section-card" style="margin-top: 16px;">
-        <div class="mock-upload-row">
-          <a-upload
-            :before-upload="beforeUpload"
-            :file-list="fileList"
-            :remove="onRemoveFile"
-            accept=".xml,application/xml,text/xml"
-          >
-            <a-button icon="upload">\u9009\u62e9 XML \u62a5\u544a</a-button>
-          </a-upload>
-          <a-checkbox v-model="forceReimport" :disabled="!bundleStatus || !bundleStatus.instancesIngested">
-            \u5f3a\u5236\u91cd\u5bfc\uff08\u6e05\u9664\u5df2\u5165\u5e93\u5b9e\u4f8b\uff09
-          </a-checkbox>
-        </div>
-        <div class="mock-actions">
-          <a-button :disabled="!uploadFile" :loading="previewing" @click="handlePreview">
-            \u9884\u89c8\u89e3\u6790
-          </a-button>
-          <a-button
-            type="primary"
-            :disabled="!uploadFile"
-            :loading="importing"
-            @click="handleImport"
-          >
-            \u786e\u8ba4\u5bfc\u5165\u5e76\u89e6\u53d1 FINISHED
-          </a-button>
-        </div>
-        <div class="api-hint">POST /internal/admin/mock-tasks/{taskId}/preview-report \u00b7 import-report</div>
-
-        <a-alert
-          v-if="previewResult"
-          type="info"
-          show-icon
-          style="margin-top: 12px;"
-          :message="previewMessage"
-        />
-
-        <a-table
-          v-if="previewResult && previewResult.samples && previewResult.samples.length"
-          size="small"
-          row-key="vulNetAddr"
-          style="margin-top: 12px;"
-          :pagination="false"
-          :columns="previewColumns"
-          :data-source="previewResult.samples"
-        />
-      </a-card>
     </template>
+
+    <a-card
+      title="\u5bfc\u5165 NSFocus XML"
+      :bordered="false"
+      class="mock-section-card"
+      style="margin-top: 16px;"
+    >
+      <a-alert
+        v-if="!dispatch"
+        type="info"
+        show-icon
+        message="\u8bf7\u5148\u8f93\u5165 taskId \u5e76\u70b9\u300c\u52a0\u8f7d\u4efb\u52a1\u300d"
+        style="margin-bottom: 12px;"
+      />
+
+      <div class="mock-upload-row">
+        <input
+          ref="fileInput"
+          type="file"
+          accept=".xml,application/xml,text/xml"
+          class="mock-file-input"
+          @change="onNativeFileChange"
+        />
+        <a-button icon="upload" @click="openFilePicker">\u9009\u62e9 XML \u62a5\u544a</a-button>
+        <span v-if="selectedFileName" class="mock-file-name">{{ selectedFileName }}</span>
+        <a-button v-if="uploadFile" type="link" size="small" @click="clearFile">\u6e05\u9664</a-button>
+        <a-checkbox
+          v-model="forceReimport"
+          :disabled="!bundleStatus || !bundleStatus.instancesIngested"
+        >
+          \u5f3a\u5236\u91cd\u5bfc\uff08\u6e05\u9664\u5df2\u5165\u5e93\u5b9e\u4f8b\uff09
+        </a-checkbox>
+      </div>
+
+      <div class="mock-actions">
+        <a-button :loading="previewing" @click="handlePreview">\u9884\u89c8\u89e3\u6790</a-button>
+        <a-button type="primary" :loading="importing" @click="handleImport">
+          \u786e\u8ba4\u5bfc\u5165\u5e76\u89e6\u53d1 FINISHED
+        </a-button>
+      </div>
+      <div class="api-hint">POST /internal/admin/mock-tasks/{taskId}/preview-report \u00b7 import-report</div>
+
+      <a-alert
+        v-if="previewResult"
+        type="info"
+        show-icon
+        style="margin-top: 12px;"
+        :message="previewMessage"
+      />
+
+      <a-table
+        v-if="previewResult && previewResult.samples && previewResult.samples.length"
+        size="small"
+        row-key="vulNetAddr"
+        style="margin-top: 12px;"
+        :pagination="false"
+        :columns="previewColumns"
+        :data-source="previewResult.samples"
+      />
+    </a-card>
   </div>
 </template>
 
@@ -161,7 +173,8 @@ import {
   getBundleStatus,
   getDispatchPacket,
   importMockReport,
-  previewMockReport
+  previewMockReport,
+  resolveUploadFile
 } from '@/api/openPlatform/mockTask'
 
 export default {
@@ -176,7 +189,7 @@ export default {
       dispatch: null,
       bundleStatus: null,
       uploadFile: null,
-      fileList: [],
+      selectedFileName: '',
       forceReimport: false,
       previewResult: null,
       previewColumns: [
@@ -206,6 +219,51 @@ export default {
     }
   },
   methods: {
+    openFilePicker () {
+      const input = this.$refs.fileInput
+      if (input) {
+        input.click()
+      }
+    },
+    onNativeFileChange (event) {
+      const file = event.target && event.target.files && event.target.files[0]
+      if (!file) return
+      const name = (file.name || '').toLowerCase()
+      if (!name.endsWith('.xml')) {
+        this.$message.warning('\u8bf7\u9009\u62e9 .xml \u683c\u5f0f\u7684\u62a5\u544a\u6587\u4ef6')
+        this.clearFile()
+        return
+      }
+      this.uploadFile = file
+      this.selectedFileName = file.name
+      this.previewResult = null
+    },
+    clearFile () {
+      this.uploadFile = null
+      this.selectedFileName = ''
+      this.previewResult = null
+      const input = this.$refs.fileInput
+      if (input) {
+        input.value = ''
+      }
+    },
+    ensureImportReady () {
+      const taskId = (this.taskIdInput || '').trim()
+      if (!taskId) {
+        this.$message.warning('\u8bf7\u8f93\u5165 taskId')
+        return null
+      }
+      if (!this.dispatch) {
+        this.$message.warning('\u8bf7\u5148\u70b9\u300c\u52a0\u8f7d\u4efb\u52a1\u300d\u786e\u8ba4\u4efb\u52a1\u5b58\u5728')
+        return null
+      }
+      const file = resolveUploadFile(this.uploadFile)
+      if (!file) {
+        this.$message.warning('\u8bf7\u5148\u9009\u62e9 XML \u62a5\u544a\u6587\u4ef6')
+        return null
+      }
+      return { taskId, file }
+    },
     async loadTask () {
       const taskId = (this.taskIdInput || '').trim()
       if (!taskId) {
@@ -229,41 +287,30 @@ export default {
         this.loading = false
       }
     },
-    beforeUpload (file) {
-      this.uploadFile = file
-      this.fileList = [file]
-      this.previewResult = null
-      return false
-    },
-    onRemoveFile () {
-      this.uploadFile = null
-      this.fileList = []
-      this.previewResult = null
-      return true
-    },
     async handlePreview () {
-      const taskId = (this.taskIdInput || '').trim()
-      if (!taskId || !this.uploadFile) return
+      const ctx = this.ensureImportReady()
+      if (!ctx) return
       this.previewing = true
       try {
-        this.previewResult = await previewMockReport(taskId, this.uploadFile, 10)
+        this.previewResult = await previewMockReport(ctx.taskId, ctx.file, 10)
         this.$message.success('\u9884\u89c8\u5b8c\u6210')
       } finally {
         this.previewing = false
       }
     },
     async handleImport () {
-      const taskId = (this.taskIdInput || '').trim()
-      if (!taskId || !this.uploadFile) return
+      const ctx = this.ensureImportReady()
+      if (!ctx) return
       if (this.bundleStatus && this.bundleStatus.instancesIngested && !this.forceReimport) {
         this.$message.warning('\u5b9e\u4f8b\u5df2\u5165\u5e93\uff0c\u8bf7\u52fe\u9009\u300c\u5f3a\u5236\u91cd\u5bfc\u300d\u6216\u66f4\u6362 taskId')
         return
       }
       this.importing = true
       try {
-        const result = await importMockReport(taskId, this.uploadFile, this.forceReimport)
+        const result = await importMockReport(ctx.taskId, ctx.file, this.forceReimport)
         const ingestLabel = result.instancesIngested ? '\\u6210\\u529f' : '\\u672a\\u5b8c\\u6210'
         this.$message.success('\\u5bfc\\u5165\\u6210\\u529f\\uff1a' + result.instanceCount + ' \\u6761\\u5b9e\\u4f8b\\uff0c\\u5165\\u5e93 ' + ingestLabel)
+        this.clearFile()
         await this.loadTask()
       } finally {
         this.importing = false
@@ -293,6 +340,19 @@ export default {
 .dir-code {
   font-size: 12px;
   word-break: break-all;
+}
+
+.mock-file-input {
+  display: none;
+}
+
+.mock-file-name {
+  color: rgba(0, 0, 0, 0.65);
+  font-size: 13px;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .mock-upload-row {

@@ -20,6 +20,15 @@ openApiRequest.interceptors.request.use(config => {
   if (adminKey) {
     config.headers['X-Internal-Admin-Key'] = adminKey
   }
+  // multipart 须由浏览器自动带 boundary，勿沿用 axios 默认 application/json
+  if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+    if (config.headers && config.headers.common) {
+      delete config.headers.common['Content-Type']
+    }
+    if (config.headers) {
+      delete config.headers['Content-Type']
+    }
+  }
   return config
 })
 
@@ -27,7 +36,14 @@ openApiRequest.interceptors.response.use(
   response => {
     const config = response.config || {}
     if (config.responseType === 'blob') {
-      const contentType = (response.headers && response.headers['content-type']) || ''
+      const headers = response.headers || {}
+      const contentType = headers['content-type'] || headers['Content-Type'] || ''
+      const disposition = headers['content-disposition'] || headers['Content-Disposition'] || ''
+      const isAttachment = /attachment/i.test(disposition)
+      // Successful file downloads (e.g. export json) use application/json + Content-Disposition: attachment
+      if (isAttachment) {
+        return response
+      }
       if (contentType.indexOf('application/json') >= 0 && response.data instanceof Blob) {
         return new Promise((resolve, reject) => {
           const reader = new FileReader()
@@ -35,7 +51,7 @@ openApiRequest.interceptors.response.use(
             try {
               const res = JSON.parse(reader.result)
               const silent = config.silent
-              if (res.code !== 0) {
+              if (res != null && typeof res.code === 'number' && res.code !== 0) {
                 if (!silent) {
                   notification.error({
                     message: '请求失败',
@@ -44,7 +60,7 @@ openApiRequest.interceptors.response.use(
                 }
                 reject(new Error(res.message || 'Error'))
               } else {
-                resolve(res.data)
+                resolve(response)
               }
             } catch (e) {
               resolve(response)
