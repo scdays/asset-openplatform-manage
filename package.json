@@ -7,6 +7,7 @@
     "serve": "node scripts/run-vue-cli.js serve",
     "verify:utf8": "node scripts/verify-utf8.js",
     "build:openplatform-views": "node scripts/build-invocation-views.js",
+    "build:mock-e2e-vue": "node scripts/_build_e2e_console.mjs",
     "build": "node scripts/verify-utf8.js && node scripts/run-vue-cli.js build",
     "lint": "vue-cli-service lint",
     "lint:nofix": "vue-cli-service lint --no-fix"

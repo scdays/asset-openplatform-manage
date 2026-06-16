@@ -72,6 +72,12 @@ export const asyncRouterMap = [
     meta: { title: 'Mock 半人工导入' }
   },
   {
+    path: '/mock-e2e',
+    name: 'MockE2eConsole',
+    component: () => import('@/views/openPlatform/MockE2eConsole'),
+    meta: { title: 'Mock 全流程联调' }
+  },
+  {
     path: '/',
     redirect: '/overview'
   }

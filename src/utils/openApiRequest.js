@@ -1,25 +1,48 @@
 import axios from 'axios'
 import { notification } from 'ant-design-vue'
+import storage from 'store'
+import store from '@/store'
+import resolveOpenApiBaseURL from '@/utils/resolveOpenApiBaseURL'
+import { getOpenApiAdminKey, hasOpenApiAdminKey } from '@/utils/openPlatformRuntime'
+import { ACCESS_TOKEN } from '@/store/mutation-types'
 
-function resolveBaseURL () {
-  const baseURL = process.env.VUE_APP_OPEN_API_BASE_URL
-  if (window.__POWERED_BY_QIANKUN__ && baseURL && baseURL.indexOf('/') === 0) {
-    const publicPath = (window.__INJECTED_PUBLIC_PATH_BY_QIANKUN__ || '').replace(/\/$/, '')
-    return `${publicPath}${baseURL}`
+/** 经网关 7000 转发时须带平台 JWT；open-api 内网管理接口另需 X-Internal-Admin-Key */
+function resolveGatewayJwt () {
+  let token = store.getters.token
+  const parent = store.state.user && store.state.user.pStore
+  if (!token && parent && parent.getters) {
+    token = parent.getters.token
   }
-  return baseURL
+  if (!token) {
+    token = storage.get(ACCESS_TOKEN)
+  }
+  if (!token) {
+    return ''
+  }
+  return 'JWT ' + String(token).replace(/^JWT\s+/i, '').trim()
 }
 
 const openApiRequest = axios.create({
-  baseURL: resolveBaseURL(),
   timeout: 60000
 })
 
 openApiRequest.interceptors.request.use(config => {
-  const adminKey = process.env.VUE_APP_OPEN_API_ADMIN_KEY
+  if (!config.baseURL) {
+    config.baseURL = resolveOpenApiBaseURL()
+  }
+  const jwt = resolveGatewayJwt()
+  if (jwt) {
+    config.headers.Authorization = jwt
+  }
+  const adminKey = getOpenApiAdminKey()
   if (adminKey) {
     config.headers['X-Internal-Admin-Key'] = adminKey
   }
+  // #region agent log
+  const origin = typeof window !== 'undefined' && window.location ? window.location.origin : ''
+  const path = config.url || ''
+  fetch('http://127.0.0.1:7874/ingest/023b9c15-9f3a-4c05-9179-99ba833b20c8', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '9a4f66' }, body: JSON.stringify({ sessionId: '9a4f66', runId: 'partner-gw', hypothesisId: 'H-ADMIN', location: 'openApiRequest.js', message: 'platform-gateway admin request', data: { baseURL: config.baseURL, origin, path, fullUrl: origin + config.baseURL + path, hasJwt: !!jwt, hasAdminKey: !!adminKey }, timestamp: Date.now() }) }).catch(() => {})
+  // #endregion
   // multipart 须由浏览器自动带 boundary，勿沿用 axios 默认 application/json
   if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
     if (config.headers && config.headers.common) {
@@ -104,5 +127,5 @@ openApiRequest.interceptors.response.use(
 export default openApiRequest
 
 export function hasAdminKey () {
-  return !!process.env.VUE_APP_OPEN_API_ADMIN_KEY
+  return hasOpenApiAdminKey()
 }

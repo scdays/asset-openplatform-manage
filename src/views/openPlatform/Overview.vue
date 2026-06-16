@@ -122,6 +122,17 @@ const items = [
     ]
   },
   {
+    key: 'mockE2e',
+    phase: 'P1',
+    title: 'Mock 全流程联调控制台',
+    routeName: 'MockE2eConsole',
+    lines: [
+      '一键跑通 manual mock 全链路',
+      'Partner / Token / 任务 / 导入 / 外发 / Webhook',
+      '可替代 e2e-mock-manual-flow.ps1 脚本'
+    ]
+  },
+  {
     key: 'quota',
     phase: 'P2',
     title: '配额与限流',

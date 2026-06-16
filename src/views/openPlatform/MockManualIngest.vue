@@ -19,6 +19,11 @@
     />
 
     <a-card :bordered="false" class="mock-search-card">
+      <div class="mock-page-links">
+        <a @click="$router.push({ name: 'MockE2eConsole' })">全流程联调控制台</a>
+        <span class="link-sep">·</span>
+        <span>单任务 XML 导入（本页）</span>
+      </div>
       <a-form layout="vertical">
         <a-row :gutter="16" type="flex" align="bottom">
           <a-col :xs="24" :sm="16" :xl="8">
@@ -321,6 +326,16 @@ export default {
 .mock-search-card,
 .mock-section-card {
   margin-top: 16px;
+}
+
+.mock-page-links {
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.link-sep {
+  margin: 0 8px;
 }
 
 .mock-hint {

@@ -1,13 +1,20 @@
+import { getOpenPartnerGatewayURLFromConf } from '@/utils/openPlatformRuntime'
+
 /**
- * Partner 公网接入地址（Token / Open API），用于凭证交付与 DeliveryGuidePanel。
- * 配置 VUE_APP_OPEN_PUBLIC_BASE_URL，例如 https://open.example.com
+ * Partner 公网接入地址（partner-gateway），用于凭证交付 curl 展示。
+ * 与浏览器 openPartnerRequest 分离：展示可用 host:35770，实际 E2E 请求走同源反代。
  */
 export function getPartnerPublicBaseUrl () {
-  const configured = (process.env.VUE_APP_OPEN_PUBLIC_BASE_URL || '').trim()
+  const configured = getOpenPartnerGatewayURLFromConf()
+    || (typeof process !== 'undefined' && process.env && process.env.VUE_APP_OPEN_PARTNER_PUBLIC_BASE_URL)
   if (configured) {
-    return configured.replace(/\/$/, '')
+    return String(configured).trim().replace(/\/$/, '')
   }
-  return 'https://open.example.com'
+  if (typeof window !== 'undefined' && window.location && window.location.hostname) {
+    const protocol = window.location.protocol || 'http:'
+    return `${protocol}//${window.location.hostname}:35770`
+  }
+  return 'http://127.0.0.1:35770'
 }
 
 export function getPartnerTokenUrl () {
@@ -48,7 +55,7 @@ export function buildDeliveryGuideText (clientId, clientSecret, { maskSecret = t
     `curl -X POST "${apiBase}/tasks/vul" \\\n  -H "Authorization: Bearer {token}" \\\n  -H "Content-Type: application/json" \\\n  -d '{"extTaskId":"demo-001","taskName":"联调任务"}'`,
     '',
     '3. 联调环境',
-    `公网入口：${publicBase}`,
+    `Partner 网关入口：${publicBase}`,
     '后端 mock 模式时实例数据来自 fixture，运营在「调用记录」观测。'
   ].join('\n')
 }
