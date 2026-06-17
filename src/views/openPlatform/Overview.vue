@@ -149,9 +149,9 @@ const items = [
     title: '修复核验运营',
     routeName: 'VerifyFixOps',
     lines: [
-      '选择已注册接入方并绑定 Token',
-      'POST verify-fix 异步受理 + 运营完成',
-      '仅 Webhook，不外发 VERIFY_FIX_SCAN'
+      '从 open_vuln_instance 多选实例',
+      '验证/误报/处置/创建内部修复核验作业',
+      '完成作业 → 仅 INSTANCE_VERIFY_FIX_COMPLETED'
     ]
   },
   {
