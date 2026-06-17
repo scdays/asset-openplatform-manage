@@ -78,6 +78,18 @@ export const asyncRouterMap = [
     meta: { title: 'Mock 全流程联调' }
   },
   {
+    path: '/soc-orchestration',
+    name: 'OpenSocOrchestration',
+    component: () => import('@/views/openPlatform/OpenSocOrchestration'),
+    meta: { title: 'SOC 编排监控' }
+  },
+  {
+    path: '/verify-fix-ops',
+    name: 'VerifyFixOps',
+    component: () => import('@/views/openPlatform/VerifyFixOps'),
+    meta: { title: '修复核验运营' }
+  },
+  {
     path: '/',
     redirect: '/overview'
   }

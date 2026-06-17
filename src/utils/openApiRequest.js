@@ -38,11 +38,6 @@ openApiRequest.interceptors.request.use(config => {
   if (adminKey) {
     config.headers['X-Internal-Admin-Key'] = adminKey
   }
-  // #region agent log
-  const origin = typeof window !== 'undefined' && window.location ? window.location.origin : ''
-  const path = config.url || ''
-  fetch('http://127.0.0.1:7874/ingest/023b9c15-9f3a-4c05-9179-99ba833b20c8', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '9a4f66' }, body: JSON.stringify({ sessionId: '9a4f66', runId: 'partner-gw', hypothesisId: 'H-ADMIN', location: 'openApiRequest.js', message: 'platform-gateway admin request', data: { baseURL: config.baseURL, origin, path, fullUrl: origin + config.baseURL + path, hasJwt: !!jwt, hasAdminKey: !!adminKey }, timestamp: Date.now() }) }).catch(() => {})
-  // #endregion
   // multipart 须由浏览器自动带 boundary，勿沿用 axios 默认 application/json
   if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
     if (config.headers && config.headers.common) {

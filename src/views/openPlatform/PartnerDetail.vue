@@ -133,12 +133,22 @@
           </a-tab-pane>
 
           <a-tab-pane key="callback" tab="回调配置">
+            <div class="table-operator table-operator-fixed" style="margin-bottom: 12px;">
+              <span class="field-helper">webhookSecret 仅生成或轮换时展示一次，用于 HMAC-SHA256 验签</span>
+              <a-button type="primary" @click="openWebhookSecretRotate">轮换 Webhook Secret</a-button>
+            </div>
             <a-form-model :label-col="{ span: 4 }" :wrapper-col="{ span: 12 }">
               <a-form-model-item label="defaultCallbackUrl">
                 <a-input :value="partner.defaultCallbackUrl" read-only />
               </a-form-model-item>
+              <a-form-model-item label="webhookSecret">
+                <a-tag :color="partner.webhookSecretConfigured ? 'green' : 'default'">
+                  {{ partner.webhookSecretConfigured ? '已配置' : '未配置' }}
+                </a-tag>
+              </a-form-model-item>
             </a-form-model>
             <a-button type="link" style="padding-left: 0;" @click="goEdit">在编辑页修改回调地址</a-button>
+            <p class="field-helper" style="margin-top: 8px;">POST /internal/admin/partners/{partnerId}/webhook-secret/rotate</p>
           </a-tab-pane>
         </a-tabs>
       </a-card>
@@ -150,6 +160,14 @@
       @close="credentialVisible = false"
       @created="loadCredentials"
     />
+
+    <webhook-secret-rotate-modal
+      :visible="webhookSecretVisible"
+      :partner-id="partnerId"
+      :prefill="webhookSecretPrefill"
+      @close="closeWebhookSecretModal"
+      @rotated="onWebhookSecretRotated"
+    />
   </div>
 </template>
 
@@ -158,6 +176,7 @@ import { getPartner, listCredentials } from '@/api/partner'
 import { getPartnerStats, listWebhookDeliveries } from '@/api/openPlatform/invocation'
 import CapabilityCheckboxGroup from './components/CapabilityCheckboxGroup'
 import CredentialCreateModal from './components/CredentialCreateModal'
+import WebhookSecretRotateModal from './components/WebhookSecretRotateModal'
 import EnumTag from '@/components/openPlatform/EnumTag'
 import ResponseCodeTag from '@/components/openPlatform/ResponseCodeTag'
 import { labelOf, responseCodeLabel, formatHttpStatus } from '@/constants/openPlatformDisplay'
@@ -197,6 +216,7 @@ export default {
   components: {
     CapabilityCheckboxGroup,
     CredentialCreateModal,
+    WebhookSecretRotateModal,
     EnumTag,
     ResponseCodeTag
   },
@@ -213,6 +233,8 @@ export default {
       webhookLoading: false,
       activeTab: 'basic',
       credentialVisible: false,
+      webhookSecretVisible: false,
+      webhookSecretPrefill: null,
       credentialColumns,
       errorCodeColumns,
       trendColumns,
@@ -227,6 +249,7 @@ export default {
   created () {
     this.loadPartner()
     this.loadCredentials()
+    this.tryOpenPendingWebhookSecret()
   },
   watch: {
     activeTab (value) {
@@ -319,6 +342,38 @@ export default {
     },
     goEdit () {
       this.$router.push({ name: 'PartnerEdit', params: { partnerId: this.partnerId } })
+    },
+    openWebhookSecretRotate () {
+      this.webhookSecretPrefill = null
+      this.webhookSecretVisible = true
+    },
+    closeWebhookSecretModal () {
+      this.webhookSecretVisible = false
+      this.webhookSecretPrefill = null
+    },
+    onWebhookSecretRotated () {
+      this.loadPartner()
+    },
+    tryOpenPendingWebhookSecret () {
+      if (this.$route.query.showWebhookSecret !== '1') {
+        return
+      }
+      const key = 'openplatform.pendingWebhookSecret.' + this.partnerId
+      const raw = sessionStorage.getItem(key)
+      if (!raw) {
+        return
+      }
+      sessionStorage.removeItem(key)
+      try {
+        const payload = JSON.parse(raw)
+        if (payload && payload.webhookSecret) {
+          this.webhookSecretPrefill = payload
+          this.webhookSecretVisible = true
+          this.activeTab = 'callback'
+        }
+      } catch (e) {
+        // ignore
+      }
     }
   }
 }

@@ -20,8 +20,8 @@ export function getPartnerSession () {
 }
 
 /**
- * ?????? Open API???? partner-gateway??35770????Bearer ?????
- * ?? openApiRequest???????? /open-api-service?????????????????????
+ * 第三方 Open API 请求（经 partner-gateway 35770），携带 Bearer 与 X-Partner-Id。
+ * 与 openApiRequest 分离：后者走平台网关 /open-api-service 管理内网接口。
  */
 const openPartnerRequest = axios.create({
   timeout: 120000
@@ -48,15 +48,6 @@ openPartnerRequest.interceptors.request.use(config => {
       delete config.headers['Content-Type']
     }
   }
-
-  // #region agent log
-  const base = config.baseURL || ''
-  const path = config.url || ''
-  const origin = typeof window !== 'undefined' && window.location ? window.location.origin : ''
-  const fullUrl = base ? (base.replace(/\/$/, '') + path) : (origin + path)
-  fetch('http://127.0.0.1:7874/ingest/023b9c15-9f3a-4c05-9179-99ba833b20c8', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '9a4f66' }, body: JSON.stringify({ sessionId: '9a4f66', runId: 'cors-fix', hypothesisId: 'H-CORS', location: 'openPartnerRequest.js', message: 'partner token/api request', data: { baseURL: base || '(same-origin)', path, fullUrl, crossOrigin: !!base }, timestamp: Date.now() }) }).catch(() => {})
-  // #endregion
-
   return config
 })
 
@@ -74,8 +65,8 @@ openPartnerRequest.interceptors.response.use(
     if (res.code !== 0) {
       if (!silent) {
         notification.error({
-          message: 'Open API ???????',
-          description: res.message || `?????? ${res.code}`
+          message: 'Open API 业务失败',
+          description: res.message || `错误码 ${res.code}`
         })
       }
       const err = new Error(res.message || 'Error')
@@ -91,7 +82,7 @@ openPartnerRequest.interceptors.response.use(
     const msg = (body && body.message) || error.message
     if (!silent) {
       notification.error({
-        message: 'Open API ???????',
+        message: 'Open API 请求失败',
         description: msg
       })
     }

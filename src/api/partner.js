@@ -30,3 +30,7 @@ export function listCredentials (partnerId) {
 export function createCredential (partnerId) {
   return openApiRequest.post(`${PREFIX}/${encodeURIComponent(partnerId)}/credentials`)
 }
+
+export function rotateWebhookSecret (partnerId) {
+  return openApiRequest.post(`${PREFIX}/${encodeURIComponent(partnerId)}/webhook-secret/rotate`)
+}

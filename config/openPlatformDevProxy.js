@@ -1,4 +1,4 @@
-/** devServer proxy��Admin �� ƽ̨���� 7000��Partner �� partner-gateway 35770 */
+/** devServer 反代：Admin 走平台网关 7000；Partner 走 partner-gateway 35770 */
 module.exports = function createOpenPlatformDevProxy () {
   const platformGateway = process.env.VUE_APP_GATEWAY_PROXY_TARGET || 'http://127.0.0.1:7000'
   const partnerGateway = process.env.VUE_APP_PARTNER_GATEWAY_PROXY_TARGET || 'http://127.0.0.1:35770'

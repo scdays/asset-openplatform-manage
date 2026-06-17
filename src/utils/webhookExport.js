@@ -32,7 +32,7 @@ export function guessExportFileName (record, disposition) {
 
 export function triggerExportDownload (record) {
   if (!canDownloadExportDelivery(record)) {
-    return Promise.reject(new Error('µ±Ç°¼ÇÂ¼²»¿ÉÏÂÔØÍâ·¢ÎÄ¼ş'))
+    return Promise.reject(new Error('å½“å‰è®°å½•ä¸å¯ä¸‹è½½å¤–å‘æ–‡ä»¶'))
   }
   return downloadAdminExport(record.partnerId, record.exportId).then(response => {
     const blob = response.data
@@ -48,6 +48,6 @@ export function triggerExportDownload (record) {
     link.click()
     document.body.removeChild(link)
     URL.revokeObjectURL(url)
-    message.success('\u5916\u53d1\u6587\u4ef6\u5df2\u5f00\u59cb\u4e0b\u8f7d')
+    message.success('å¤–å‘æ–‡ä»¶å·²å¼€å§‹ä¸‹è½½')
   })
 }

@@ -133,6 +133,28 @@ const items = [
     ]
   },
   {
+    key: 'socOrch',
+    phase: 'W1',
+    title: 'SOC 编排监控',
+    routeName: 'OpenSocOrchestration',
+    lines: [
+      'Partner API 创建漏洞扫描任务',
+      '轮询任务进度（编排模式走 vul-pass Internal API）',
+      '需 orchestration.enabled=true'
+    ]
+  },
+  {
+    key: 'verifyFixOps',
+    phase: 'W3',
+    title: '修复核验运营',
+    routeName: 'VerifyFixOps',
+    lines: [
+      'POST verify-fix 异步受理',
+      '返回 verifyFixJobId / RUNNING',
+      'vul-pass Kafka 回收后 6/7/10'
+    ]
+  },
+  {
     key: 'quota',
     phase: 'P2',
     title: '配额与限流',

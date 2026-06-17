@@ -158,6 +158,18 @@ export default {
           .then(data => {
             this.$message.success('保存成功')
             const id = (data && data.partnerId) || this.form.partnerId
+            if (!this.isEdit && data && data.webhookSecret) {
+              sessionStorage.setItem(
+                'openplatform.pendingWebhookSecret.' + id,
+                JSON.stringify({ partnerId: id, webhookSecret: data.webhookSecret })
+              )
+              this.$router.push({
+                name: 'PartnerDetail',
+                params: { partnerId: id },
+                query: { showWebhookSecret: '1' }
+              })
+              return
+            }
             this.$router.push({ name: 'PartnerDetail', params: { partnerId: id } })
           })
           .finally(() => {
