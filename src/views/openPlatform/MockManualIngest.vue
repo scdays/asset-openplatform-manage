@@ -174,6 +174,7 @@ import {
   previewMockReport,
   resolveUploadFile
 } from '@/api/openPlatform/mockTask'
+import { loadSocTaskSession } from '@/utils/socTaskSessionStorage'
 
 export default {
   name: 'MockManualIngest',
@@ -210,9 +211,15 @@ export default {
     }
   },
   created () {
-    const q = this.$route.query.taskId
+    const q = (this.$route.query.taskId || '').trim()
     if (q) {
       this.taskIdInput = q
+      this.loadTask()
+      return
+    }
+    const saved = loadSocTaskSession()
+    if (saved && saved.taskId) {
+      this.taskIdInput = saved.taskId
       this.loadTask()
     }
   },

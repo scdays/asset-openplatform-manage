@@ -1,18 +1,37 @@
 import axios from 'axios'
 import { notification } from 'ant-design-vue'
 import resolveOpenPartnerGatewayBaseURL from '@/utils/resolveOpenPartnerGatewayBaseURL'
+import {
+  clearPartnerSessionStorage,
+  loadPartnerSessionFromStorage,
+  savePartnerSessionToStorage
+} from '@/utils/partnerSessionStorage'
 
 let sessionToken = null
 let sessionPartnerId = null
 
-export function setPartnerSession (accessToken, partnerId) {
+const stored = loadPartnerSessionFromStorage()
+if (stored) {
+  sessionToken = stored.accessToken
+  sessionPartnerId = stored.partnerId
+}
+
+export function setPartnerSession (accessToken, partnerId, meta = {}) {
   sessionToken = accessToken || null
   sessionPartnerId = partnerId || null
+  if (sessionToken && sessionPartnerId) {
+    savePartnerSessionToStorage({
+      partnerId: sessionPartnerId,
+      accessToken: sessionToken,
+      clientId: meta.clientId
+    })
+  }
 }
 
 export function clearPartnerSession () {
   sessionToken = null
   sessionPartnerId = null
+  clearPartnerSessionStorage()
 }
 
 export function getPartnerSession () {

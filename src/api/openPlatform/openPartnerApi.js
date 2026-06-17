@@ -33,8 +33,8 @@ export function fetchOAuthToken (clientId, clientSecret) {
   }, { silent: true })
 }
 
-export function bindPartnerAuth (accessToken, partnerId) {
-  setPartnerSession(accessToken, partnerId)
+export function bindPartnerAuth (accessToken, partnerId, meta = {}) {
+  setPartnerSession(accessToken, partnerId, meta)
 }
 
 export function createVulTask (payload) {
@@ -71,13 +71,26 @@ export function downloadPartnerExport (exportId) {
   })
 }
 
+function toAsciiHeaderValue (value) {
+  if (value == null || value === '') return value
+  const s = String(value)
+  if (!/[^\x00-\xFF]/.test(s)) return s
+  const ascii = s.replace(/[^\x00-\xFF]/g, '')
+  return ascii || `e2e-${Date.now()}`
+}
+
+function idempotencyHeaders (idempotencyKey) {
+  if (!idempotencyKey) return undefined
+  return { 'Idempotency-Key': toAsciiHeaderValue(idempotencyKey) }
+}
+
 export function verifyInstance (vulInfoId, body, idempotencyKey) {
   return openPartnerRequest.post(
     `/api/open/v1/instances/${encodeURIComponent(vulInfoId)}/verify`,
     body,
     {
       silent: true,
-      headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined
+      headers: idempotencyHeaders(idempotencyKey)
     }
   )
 }
@@ -88,7 +101,7 @@ export function remediateInstance (vulInfoId, body, idempotencyKey) {
     body,
     {
       silent: true,
-      headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined
+      headers: idempotencyHeaders(idempotencyKey)
     }
   )
 }
@@ -99,7 +112,30 @@ export function verifyFixInstance (vulInfoId, body, idempotencyKey) {
     body,
     {
       silent: true,
-      headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined
+      headers: idempotencyHeaders(idempotencyKey)
     }
   )
+}
+
+export function getInstance (vulInfoId) {
+  return openPartnerRequest.get(`/api/open/v1/instances/${encodeURIComponent(vulInfoId)}`, { silent: true })
+}
+
+function postBatch (path, items, idempotencyKey) {
+  return openPartnerRequest.post(path, { items }, {
+    silent: true,
+    headers: idempotencyHeaders(idempotencyKey)
+  })
+}
+
+export function verifyInstanceBatch (items, idempotencyKey) {
+  return postBatch('/api/open/v1/instances/verify:batch', items, idempotencyKey)
+}
+
+export function remediateInstanceBatch (items, idempotencyKey) {
+  return postBatch('/api/open/v1/instances/remediate:batch', items, idempotencyKey)
+}
+
+export function verifyFixInstanceBatch (items, idempotencyKey) {
+  return postBatch('/api/open/v1/instances/verify-fix:batch', items, idempotencyKey)
 }

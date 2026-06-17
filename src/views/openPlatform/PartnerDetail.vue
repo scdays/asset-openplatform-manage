@@ -19,7 +19,14 @@
             </div>
           </div>
           <div class="detail-actions">
-            <a-button @click="goEdit">编辑</a-button>
+            <a-dropdown>
+              <a-button>运营联调 <a-icon type="down" /></a-button>
+              <a-menu slot="overlay">
+                <a-menu-item @click="goVerifyFixOps">修复核验运营</a-menu-item>
+                <a-menu-item @click="goSocOrch">SOC 编排监控</a-menu-item>
+              </a-menu>
+            </a-dropdown>
+            <a-button style="margin-left: 8px;" @click="goEdit">编辑</a-button>
             <a-button type="primary" style="margin-left: 8px;" @click="credentialVisible = true">生成凭证</a-button>
           </div>
         </div>
@@ -342,6 +349,12 @@ export default {
     },
     goEdit () {
       this.$router.push({ name: 'PartnerEdit', params: { partnerId: this.partnerId } })
+    },
+    goVerifyFixOps () {
+      this.$router.push({ name: 'VerifyFixOps', query: { partnerId: this.partnerId } })
+    },
+    goSocOrch () {
+      this.$router.push({ name: 'OpenSocOrchestration', query: { partnerId: this.partnerId } })
     },
     openWebhookSecretRotate () {
       this.webhookSecretPrefill = null

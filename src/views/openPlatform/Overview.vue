@@ -138,9 +138,9 @@ const items = [
     title: 'SOC 编排监控',
     routeName: 'OpenSocOrchestration',
     lines: [
-      'Partner API 创建漏洞扫描任务',
-      '轮询任务进度（编排模式走 vul-pass Internal API）',
-      '需 orchestration.enabled=true'
+      '选择接入方（Webhook 投递）',
+      '关联离线导入 taskId，创建内部修复核验任务',
+      '复扫 XML 比对 → 6/7，仅 INSTANCE_VERIFY_FIX_COMPLETED'
     ]
   },
   {
@@ -149,9 +149,9 @@ const items = [
     title: '修复核验运营',
     routeName: 'VerifyFixOps',
     lines: [
-      'POST verify-fix 异步受理',
-      '返回 verifyFixJobId / RUNNING',
-      'vul-pass Kafka 回收后 6/7/10'
+      '选择已注册接入方并绑定 Token',
+      'POST verify-fix 异步受理 + 运营完成',
+      '仅 Webhook，不外发 VERIFY_FIX_SCAN'
     ]
   },
   {
