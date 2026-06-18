@@ -19,7 +19,15 @@
           <div class="meta-row">
             caseId <code>{{ workspace.caseSummary.caseId }}</code>
             · partner <code>{{ workspace.caseSummary.partnerId }}</code>
-            · 主资源
+            · 主资源类型
+            <enum-tag
+              v-if="workspace.caseSummary.primaryResourceType"
+              type="primaryResourceType"
+              :value="workspace.caseSummary.primaryResourceType"
+              with-code
+            />
+            <span v-else>-</span>
+            · 主资源 ID
             <code v-if="workspace.caseSummary.primaryResourceId">{{ workspace.caseSummary.primaryResourceId }}</code>
             <span v-else>-</span>
             · invocation <code>{{ workspace.caseSummary.invocationId || '-' }}</code>
@@ -33,11 +41,17 @@
               @click="retryDispatch"
             >重试下发</a-button>
             <a-button
-              v-if="taskScanTaskId"
+              v-if="showOpenTaskWorkspace"
               size="small"
               :style="{ marginLeft: canRetryDispatch ? '8px' : '0' }"
               @click="goOpenTaskWorkspace"
-            >OPEN 编排工作台</a-button>
+            >风险排查工作台</a-button>
+            <a-button
+              v-if="showVerifyFixWorkspace"
+              size="small"
+              style="margin-left: 8px;"
+              @click="goVerifyFixWorkspace"
+            >修复核验工作台</a-button>
             <a-button
               v-if="workspace.caseSummary.invocationId"
               size="small"
@@ -91,6 +105,10 @@
                 :data-source="workspace.invocations || []"
                 :pagination="false"
               >
+                <span slot="operationId" slot-scope="text">
+                  <enum-tag v-if="text" type="apiOperation" :value="text" with-code />
+                  <span v-else>-</span>
+                </span>
                 <span slot="responseCode" slot-scope="text">
                   <response-code-tag :value="text" />
                 </span>
@@ -118,7 +136,16 @@
                 :columns="stateLogColumns"
                 :data-source="workspace.stateLogs || []"
                 :pagination="{ pageSize: 20 }"
-              />
+              >
+                <span slot="prevStat" slot-scope="text">
+                  <enum-tag v-if="text != null && text !== ''" type="vulInfoStat" :value="text" with-code />
+                  <span v-else>-</span>
+                </span>
+                <span slot="vulInfoStat" slot-scope="text">
+                  <enum-tag v-if="text != null && text !== ''" type="vulInfoStat" :value="text" with-code />
+                  <span v-else>-</span>
+                </span>
+              </a-table>
             </a-tab-pane>
           </a-tabs>
         </a-card>
@@ -137,7 +164,7 @@ import InstanceOpCasePanel from './components/operationCase/InstanceOpCasePanel'
 import BatchCasePanel from './components/operationCase/BatchCasePanel'
 
 const invocationColumns = [
-  { title: 'operationId', dataIndex: 'operationId', width: 140 },
+  { title: 'API 操作', dataIndex: 'operationId', scopedSlots: { customRender: 'operationId' }, width: 200 },
   { title: '响应码', dataIndex: 'responseCode', scopedSlots: { customRender: 'responseCode' }, width: 100 },
   { title: 'resourceId', dataIndex: 'resourceId', ellipsis: true },
   { title: 'caseId', dataIndex: 'caseId', scopedSlots: { customRender: 'caseId' }, width: 140 },
@@ -154,8 +181,8 @@ const webhookColumns = [
 
 const stateLogColumns = [
   { title: 'vulInfoId', dataIndex: 'vulInfoId', width: 140 },
-  { title: '前状态', dataIndex: 'prevStat', width: 70 },
-  { title: '后状态', dataIndex: 'vulInfoStat', width: 70 },
+  { title: '前状态', dataIndex: 'prevStat', scopedSlots: { customRender: 'prevStat' }, width: 120 },
+  { title: '后状态', dataIndex: 'vulInfoStat', scopedSlots: { customRender: 'vulInfoStat' }, width: 120 },
   { title: '原因', dataIndex: 'changeReason', width: 140 },
   { title: '时间', dataIndex: 'createdAt', width: 170 }
 ]
@@ -193,12 +220,43 @@ export default {
       return this.caseType === 'INSTANCE_VERIFY' || this.caseType === 'INSTANCE_REMEDIATE'
     },
     isBatch () { return this.caseType === 'INSTANCE_BATCH' },
+    primaryResourceType () {
+      const summary = this.workspace && this.workspace.caseSummary
+      return summary && summary.primaryResourceType ? summary.primaryResourceType : ''
+    },
     taskScanTaskId () {
-      if (!this.workspace || !this.workspace.payload) return ''
-      return this.workspace.payload.taskId
-        || (this.workspace.payload.taskWorkspace && this.workspace.payload.taskWorkspace.task
-          ? this.workspace.payload.taskWorkspace.task.taskId
-          : '')
+      if (!this.workspace) return ''
+      const payload = this.workspace.payload
+      const summary = this.workspace.caseSummary
+      if (payload && payload.taskId) return payload.taskId
+      if (payload && payload.taskWorkspace && payload.taskWorkspace.task) {
+        return payload.taskWorkspace.task.taskId || ''
+      }
+      if (summary && summary.primaryResourceType === 'TASK' && summary.primaryResourceId) {
+        return summary.primaryResourceId
+      }
+      return ''
+    },
+    verifyFixJobId () {
+      if (!this.workspace) return ''
+      const payload = this.workspace.payload
+      const summary = this.workspace.caseSummary
+      if (payload && payload.verifyFixWorkspace && payload.verifyFixWorkspace.job) {
+        return payload.verifyFixWorkspace.job.jobId || ''
+      }
+      if (payload && payload.job) {
+        return payload.job.jobId || ''
+      }
+      if (summary && summary.primaryResourceType === 'VERIFY_FIX_JOB' && summary.primaryResourceId) {
+        return summary.primaryResourceId
+      }
+      return ''
+    },
+    showOpenTaskWorkspace () {
+      return this.primaryResourceType === 'TASK' && !!this.taskScanTaskId
+    },
+    showVerifyFixWorkspace () {
+      return this.primaryResourceType === 'VERIFY_FIX_JOB' && !!this.verifyFixJobId
     },
     canRetryDispatch () {
       if (!this.workspace || !this.workspace.caseSummary) return false
@@ -235,6 +293,10 @@ export default {
     goOpenTaskWorkspace () {
       if (!this.taskScanTaskId) return
       this.$router.push({ name: 'OpenTaskWorkspace', params: { taskId: this.taskScanTaskId } })
+    },
+    goVerifyFixWorkspace () {
+      if (!this.verifyFixJobId) return
+      this.$router.push({ name: 'VerifyFixWorkspace', params: { jobId: this.verifyFixJobId } })
     },
     goInvocation () {
       const id = this.workspace.caseSummary.invocationId

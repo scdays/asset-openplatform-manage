@@ -9,7 +9,7 @@
       type="info"
       show-icon
       message="SOC 修复核验编排（平台内部任务）"
-      description="本页不调用 Partner API 建扫任务。基于半人工离线导入的系统漏洞实例，创建平台内部修复核验任务 → 导入复扫 XML 比对 → 实例跃迁 6/7，仅推送 INSTANCE_VERIFY_FIX_COMPLETED，不外发 VERIFY_FIX_SCAN / EXPORT_READY。"
+      description="本页不调用 Partner API 建扫任务。基于半人工离线导入的系统漏洞实例，创建平台内部修复核验 → 导入复扫 XML 比对 → 实例跃迁 6/7，仅推送 INSTANCE_VERIFY_FIX_COMPLETED，不外发 VERIFY_FIX_SCAN / EXPORT_READY。"
       style="margin: 16px 0;"
     />
 
@@ -72,14 +72,14 @@
       </template>
     </a-card>
 
-    <a-card title="2. 创建平台内部修复核验任务" :bordered="false" style="margin-bottom: 16px;">
+    <a-card title="2. 创建平台内部修复核验" :bordered="false" style="margin-bottom: 16px;">
       <p class="soc-hint">创建的是 open_verify_fix_job 内部任务，Partner 侧无扫网任务感知。</p>
       <a-button
         type="primary"
         :loading="creatingJob"
         :disabled="!canCreateJob"
         @click="createInternalJob"
-      >创建内部修复核验任务</a-button>
+      >创建内部修复核验</a-button>
       <a-button style="margin-left: 8px;" :disabled="!jobId" :loading="polling" @click="refreshJob">刷新任务</a-button>
     </a-card>
 
@@ -237,7 +237,7 @@ export default {
       return {
         type: 'warning',
         title: '先完成离线导入与实例 stat=5',
-        desc: '在半人工导入页入库后，确保目标实例已处置为 stat=5，再创建内部修复核验任务。'
+        desc: '在半人工导入页入库后，确保目标实例已处置为 stat=5，再创建内部修复核验。'
       }
     },
     nextSteps () {
@@ -258,7 +258,7 @@ export default {
       return [
         'Mock 全流程或半人工导入：完成 XML 入库并得到 taskId',
         '实例链路：验证(2) → 处置修复(5)',
-        '回到本页：选接入方 → 加载 taskId → 创建内部修复核验任务'
+        '回到本页：选接入方 → 加载 taskId → 创建内部修复核验'
       ]
     }
   },

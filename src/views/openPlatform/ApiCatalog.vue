@@ -3,9 +3,9 @@
     <a-breadcrumb>
       <a-breadcrumb-item>开放平台</a-breadcrumb-item>
       <a-breadcrumb-item>
-        <a @click="$router.push({ name: 'OpenPlatformOverview' })">功能总览</a>
+        <a @click="$router.push({ name: 'OpenPlatformOverview' })">控制台</a>
       </a-breadcrumb-item>
-      <a-breadcrumb-item>API 目录</a-breadcrumb-item>
+      <a-breadcrumb-item>接口目录</a-breadcrumb-item>
     </a-breadcrumb>
 
     <a-card :bordered="false" class="api-catalog-search-card">
@@ -85,7 +85,10 @@
         show-pagination="auto"
       >
         <span slot="serial" slot-scope="text, record, index">{{ index + 1 }}</span>
-        <span slot="operationId" slot-scope="text">{{ text || '-' }}</span>
+        <span slot="operationId" slot-scope="text">
+          <enum-tag v-if="text" type="apiOperation" :value="text" with-code />
+          <span v-else>-</span>
+        </span>
         <span slot="operationName" slot-scope="text">{{ text || '-' }}</span>
         <span slot="capabilityCode" slot-scope="text">
           <enum-tag type="capability" :value="text" />
@@ -111,7 +114,7 @@ import { listApiCatalogOperations } from '@/api/openPlatform/catalog'
 
 const columns = [
   { title: '序号', scopedSlots: { customRender: 'serial' }, width: 60 },
-  { title: 'operationId', dataIndex: 'operationId', scopedSlots: { customRender: 'operationId' }, width: 180 },
+  { title: 'API 操作', dataIndex: 'operationId', scopedSlots: { customRender: 'operationId' }, width: 200 },
   { title: '名称', dataIndex: 'operationName', scopedSlots: { customRender: 'operationName' }, width: 180 },
   { title: '能力码', dataIndex: 'capabilityCode', scopedSlots: { customRender: 'capabilityCode' }, width: 180 },
   { title: '状态', dataIndex: 'status', scopedSlots: { customRender: 'status' }, width: 110 },

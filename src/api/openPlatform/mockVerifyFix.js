@@ -51,14 +51,14 @@ export function createInternalVerifyFixJob (payload) {
   return openApiRequest.post(`${PREFIX}/jobs/create-from-offline-task`, payload)
 }
 
-/** 从 open_vuln_instance 查询实例（可选 taskId / vulInfoStat） */
+/** @deprecated 请使用 openVulnInstance.listOpsVulnInstances */
 export function listMockVulnInstances (partnerId, options = {}) {
   const params = { partnerId, limit: options.limit || 200 }
   if (options.taskId) params.taskId = options.taskId
   if (options.vulInfoStat != null && options.vulInfoStat !== '') {
     params.vulInfoStat = options.vulInfoStat
   }
-  return openApiRequest.get(`${PREFIX}/instances`, { params })
+  return openApiRequest.get('/internal/admin/open-vuln-instances', { params })
 }
 
 export function listVerifyFixInvocationCandidates (partnerId, limit = 100) {

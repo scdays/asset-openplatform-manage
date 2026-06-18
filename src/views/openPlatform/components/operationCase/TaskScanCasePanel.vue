@@ -23,7 +23,7 @@
         {{ payload.taskWorkspace.task.crossScan ? '是' : '否' }}
       </a-descriptions-item>
     </a-descriptions>
-    <p class="hint">完整排查/验证子任务、VTC 结果请进入 OPEN 编排工作台。</p>
+    <p class="hint">完整排查/验证子任务、VTC 结果请进入风险排查工作台。</p>
   </div>
   <a-alert
     v-else-if="payload && payload.taskId"

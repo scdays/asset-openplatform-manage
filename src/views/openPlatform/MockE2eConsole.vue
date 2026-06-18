@@ -3,10 +3,9 @@
     <a-breadcrumb>
       <a-breadcrumb-item>开放平台</a-breadcrumb-item>
       <a-breadcrumb-item>
-        <a @click="$router.push({ name: 'OpenPlatformOverview' })">功能总览</a>
+        <a @click="$router.push({ name: 'OpenPlatformOverview' })">控制台</a>
       </a-breadcrumb-item>
-      <a-breadcrumb-item>Mock 联调</a-breadcrumb-item>
-      <a-breadcrumb-item>全流程联调控制台</a-breadcrumb-item>
+      <a-breadcrumb-item>接入测试</a-breadcrumb-item>
     </a-breadcrumb>
 
     <a-alert
@@ -14,35 +13,29 @@
       type="warning"
       show-icon
       message="未配置 Admin Key"
-      description="请在 window.conf 配置 VUE_APP_OPEN_API_ADMIN_KEY。Admin 管理走 /open-api-service 平台网关；Token 与 Open API 走 partner-gateway（同源 nginx/dev 反代至 35770，或配置 VUE_APP_OPEN_PARTNER_GATEWAY_URL 直连）。"
+      description="请在 window.conf 配置 VUE_APP_OPEN_API_ADMIN_KEY。管理接口走平台网关；Partner Open API 走 partner-gateway。"
       style="margin: 16px 0;"
     />
 
     <a-card :bordered="false" class="e2e-header-card">
       <div class="e2e-header">
         <div>
-          <h2 class="e2e-title">Manual Mock 全流程联调</h2>
-          <p class="e2e-desc">覆盖 e2e-mock-manual-flow + e2e-full-flow：Partner、Token、建任务、导入 XML、外发/Webhook；可选实例状态机（验证→VERIFY_SCAN→处置→异步修复核验→运营完成→Webhook，修复核验不外发）。</p>
+          <h2 class="e2e-title">接入测试</h2>
+          <p class="e2e-desc">模拟接入方完成 Partner 注册、Token 换取与建任务。task-center 模式下任务进入工作台后由扫描编排自动入库；后续在「处置测试」页按 Open API 执行验证、处置与修复核验。</p>
         </div>
         <div class="e2e-header-actions">
           <a-button :loading="running" type="primary" icon="play-circle" @click="runFullFlow">
-            一键运行全流程
+            一键执行（至建任务）
           </a-button>
-          <a-button :disabled="running" @click="resetSession">重置</a-button>
+          <a-button :disabled="running" @click="resetSession">清除会话</a-button>
         </div>
       </div>
 
       <a-steps :current="currentStep" size="small" class="e2e-steps">
         <a-step title="环境" />
-        <a-step title="Partner" />
+        <a-step title="接入方" />
         <a-step title="Token" />
         <a-step title="建任务" />
-        <a-step title="导入 XML" />
-        <a-step title="验证" />
-        <a-step title="外发" />
-        <a-step title="Webhook" />
-        <a-step v-if="taskForm.includeInstanceFsm" title="核验" />
-        <a-step v-if="taskForm.includeInstanceFsm" title="修复核验" />
       </a-steps>
     </a-card>
 
@@ -60,8 +53,8 @@
             v-if="partnerMode === 'existing'"
             ref="partnerSession"
             :initial-partner-id="initialPartnerId"
-            hint-title="选用合作方管理中的接入方"
-            hint-desc="选择 partnerId 后可直接点分步「2 Partner」「3 Token」，或点「绑定会话」。Token 会记入下方列表，并与其他运营页共享。"
+            hint-title="选用合作伙伴中的接入方"
+            hint-desc="选择 partnerId 并绑定 Token。绑定信息仅保存在当前浏览器会话，点「清除会话」可完全清空。"
             @bound="onPartnerBound"
             @cleared="onPartnerCleared"
             @partner-change="onPartnerSelect"
@@ -103,7 +96,7 @@
             <div class="credential-actions">
               <a-button size="small" @click="copyCredentialBundle">复制完整接入包（JSON）</a-button>
             </div>
-            <p class="credential-hint">步骤 3 Token 将用上述凭证换取 accessToken；也可在「修复核验运营 / SOC 编排」选同一 partnerId + 粘贴 Secret 复用。</p>
+            <p class="credential-hint">步骤 3 将用上述凭证换取 accessToken，与「处置测试」页共用同一会话。</p>
           </a-card>
 
           <a-card
@@ -162,58 +155,6 @@
             <a-form-item label="扫描目标 hosts">
               <a-input v-model="taskForm.targets" :disabled="running" placeholder="逗号分隔 IP" />
             </a-form-item>
-            <a-form-item label="NSFocus XML 报告（全流程必填）">
-              <div class="e2e-upload-row">
-                <input
-                  ref="fileInput"
-                  type="file"
-                  accept=".xml,application/xml,text/xml"
-                  class="e2e-file-input"
-                  @change="onFileChange"
-                />
-                <a-button icon="upload" :disabled="running" @click="pickFile">选择 XML</a-button>
-                <span v-if="xmlFileName" class="e2e-file-name">{{ xmlFileName }}</span>
-              </div>
-            </a-form-item>
-            <a-form-item>
-              <a-checkbox v-model="taskForm.includeInstanceFsm" :disabled="running">
-                包含实例状态机（验证/处置/修复核验 + 批量，修复核验仅 Webhook）
-              </a-checkbox>
-            </a-form-item>
-            <template v-if="taskForm.includeInstanceFsm">
-              <a-form-item>
-                <a-checkbox v-model="taskForm.includeBatch" :disabled="running">
-                  包含批量（verify/remediate/verify-fix:batch，需 XML ≥3 条实例）
-                </a-checkbox>
-              </a-form-item>
-              <a-form-item>
-                <a-checkbox v-model="taskForm.includeFalsePositive" :disabled="running">
-                  包含误报分支（FALSE_POSITIVE 1→3，需额外 1 条实例）
-                </a-checkbox>
-              </a-form-item>
-              <a-row :gutter="12">
-                <a-col :span="12">
-                  <a-form-item label="主实例运营完成">
-                    <a-select v-model="taskForm.verifyFixMainMode" :disabled="running">
-                      <a-select-option value="allFixed">一键核验修复(6)</a-select-option>
-                      <a-select-option value="allUnfixed">一键核验未修复(7)</a-select-option>
-                    </a-select>
-                  </a-form-item>
-                </a-col>
-                <a-col :span="12">
-                  <a-form-item label="批量运营完成">
-                    <a-select v-model="taskForm.verifyFixBatchMode" :disabled="running">
-                      <a-select-option value="allUnfixed">全部未修复(7)</a-select-option>
-                      <a-select-option value="allFixed">全部修复(6)</a-select-option>
-                      <a-select-option value="compare">XML 比对完成</a-select-option>
-                    </a-select>
-                  </a-form-item>
-                </a-col>
-              </a-row>
-            </template>
-            <a-form-item label="外发等待秒数">
-              <a-input-number v-model="exportWaitSec" :min="10" :max="120" :disabled="running" style="width: 100%;" />
-            </a-form-item>
           </a-form>
 
           <a-divider />
@@ -225,30 +166,21 @@
             <div class="session-row" v-if="session.accessToken"><span>Token</span><code>{{ tokenPreview(session.accessToken) }}</code></div>
             <div class="session-row" v-if="session.taskId"><span>taskId</span><code>{{ session.taskId }}</code></div>
             <div class="session-links" v-if="session.taskId">
-              <a @click="goManualIngest">半人工导入页</a>
+              <a @click="goTaskWorkspace">任务工作台（导入 XML）</a>
+              <a-divider type="vertical" />
+              <a @click="goVulnDisposal">处置测试</a>
               <a-divider type="vertical" />
               <a @click="goWebhookLog">Webhook 日志</a>
-              <a-divider type="vertical" />
-              <a @click="goInvocations">调用记录</a>
             </div>
           </div>
         </a-card>
 
         <a-card title="分步执行" :bordered="false" class="e2e-section-card" style="margin-top: 16px;">
           <a-button-group class="e2e-step-buttons">
-            <a-button size="small" :disabled="running" @click="runStep('health')">1 健康</a-button>
-            <a-button size="small" :disabled="running" @click="runStep('partner')">2 Partner</a-button>
+            <a-button size="small" :disabled="running" @click="runStep('health')">1 健康检查</a-button>
+            <a-button size="small" :disabled="running" @click="runStep('partner')">2 接入方</a-button>
             <a-button size="small" :disabled="running" @click="runStep('token')">3 Token</a-button>
             <a-button size="small" :disabled="running" @click="runStep('createTask')">4 建任务</a-button>
-            <a-button size="small" :disabled="running || !session.taskId" @click="runStep('import')">5 导入</a-button>
-            <a-button size="small" :disabled="running || !session.taskId" @click="runStep('taskVerify')">6 任务完成</a-button>
-            <a-button size="small" :disabled="running || !session.taskId" @click="runStep('export')">7 外发</a-button>
-            <a-button size="small" :disabled="running || !session.partnerId" @click="runStep('webhook')">8 Webhook</a-button>
-            <a-button
-              size="small"
-              :disabled="running || !session.taskId || !taskForm.includeInstanceFsm"
-              @click="runStep('instanceFsm')"
-            >9 状态机</a-button>
           </a-button-group>
         </a-card>
       </a-col>
@@ -259,7 +191,7 @@
             <a-tag :color="summaryColor">{{ summaryText }}</a-tag>
             <span class="e2e-summary-time" v-if="lastRunAt">最近运行：{{ lastRunAt }}</span>
           </div>
-          <a-empty v-if="!results.length" description="点击「一键运行全流程」或分步按钮开始" />
+          <a-empty v-if="!results.length" description="点击「一键执行」或分步按钮开始" />
 
           <a-timeline v-else class="e2e-timeline">
             <a-timeline-item
@@ -292,21 +224,21 @@ import EnumTag from '@/components/openPlatform/EnumTag'
 import PartnerSessionPanel from '@/components/openPlatform/PartnerSessionPanel'
 import { copyToClipboard } from '@/utils/copyToClipboard'
 import { hasAdminKey } from '@/utils/openApiRequest'
-import { clearPartnerSession, getPartnerSession } from '@/utils/openPartnerRequest'
+import { getPartnerSession } from '@/utils/openPartnerRequest'
+import {
+  clearAllOpenPlatformSessions,
+  loadE2eTokenRecords,
+  saveE2eTokenRecords
+} from '@/utils/openPlatformSession'
 import {
   buildRunId,
+  runBootstrapE2e,
   runCreateTaskStep,
-  runExportStep,
-  runFullManualE2e,
   runHealthStep,
-  runImportStep,
-  runInstanceFsmFlow,
   runPartnerSkipStep,
   runPartnerStep,
-  runTaskVerifyStep,
   runTokenSkipStep,
-  runTokenStep,
-  runWebhookStep
+  runTokenStep
 } from '@/api/openPlatform/e2eRunner'
 
 const tokenColumns = [
@@ -319,18 +251,13 @@ const tokenColumns = [
 ]
 
 const MSG = {
-  pickXmlWarn: '请选择 .xml 文件',
-  resetInfo: '已重置联调会话',
+  resetInfo: '已清除联调会话与本地缓存',
   configAdmin: '请先配置 VUE_APP_OPEN_API_ADMIN_KEY',
-  needXml: '全流程需要先选择 NSFocus XML 报告',
-  flowFail: '全流程结束，',
+  flowFail: '执行结束，',
   flowFailSuffix: ' 步失败',
-  flowOk: '全流程联调通过',
+  flowOk: '建任务完成，请前往任务工作台导入 XML',
   needAdmin: '请先配置 Admin Key',
-  needPartner: '请先选择接入方或执行 Partner 步骤',
-  needToken: '请先获取或绑定 Token',
-  needTask: '请先建任务',
-  needXmlShort: '请选择 XML',
+  needPartner: '请先选择接入方或执行接入方步骤',
   passSuffix: ' 通过',
   summaryDone: '完成',
   summaryFail: '失败',
@@ -353,22 +280,14 @@ export default {
       tokenColumns,
       tokenRecords: [],
       credentialBundle: null,
-      exportWaitSec: 45,
-      xmlFile: null,
-      xmlFileName: '',
       taskForm: {
         extTaskId: `EXT-E2E-${runId}`,
-        taskName: 'console-manual-e2e',
+        taskName: 'mock-manual-task',
         type: 1,
         scanTemplateId: 1002,
         reportTemplateId: 2001,
         targets: '172.16.3.22,172.16.3.23,172.16.3.24',
-        expectManualMode: true,
-        includeInstanceFsm: true,
-        includeBatch: true,
-        includeFalsePositive: false,
-        verifyFixMainMode: 'allFixed',
-        verifyFixBatchMode: 'allUnfixed'
+        expectManualMode: true
       },
       session: {
         partnerId: '',
@@ -403,11 +322,7 @@ export default {
     },
     currentStep () {
       if (!this.results.length) return 0
-      const order = [
-        'health', 'partner', 'token', 'createTask', 'import', 'taskVerify', 'export', 'webhook',
-        'instVerify', 'verifyScanExport', 'instRemediate', 'instVerifyFix', 'verifyFixAdmin',
-        'instStat', 'verifyFixWebhook', 'instBatch', 'instanceFsm'
-      ]
+      const order = ['health', 'partner', 'token', 'createTask']
       let max = 0
       this.results.forEach(r => {
         const idx = order.indexOf(r.key)
@@ -426,6 +341,7 @@ export default {
     }
   },
   mounted () {
+    this.tokenRecords = loadE2eTokenRecords()
     this.hydratePartnerSession()
   },
   methods: {
@@ -465,6 +381,8 @@ export default {
       this.session.clientSecret = ''
       this.session.expiresIn = null
       this.session.tokenSource = ''
+      this.tokenRecords = []
+      saveE2eTokenRecords([])
     },
     tokenPreview (token) {
       if (!token) return ''
@@ -488,6 +406,7 @@ export default {
       )
       if (dup) {
         dup.obtainedAt = this.formatTime(new Date())
+        saveE2eTokenRecords(this.tokenRecords)
         return
       }
       this.tokenRecords.unshift({
@@ -500,6 +419,7 @@ export default {
         source: payload.source || 'bind',
         obtainedAt: this.formatTime(new Date())
       })
+      saveE2eTokenRecords(this.tokenRecords)
       if (!silent) {
         this.$message.success('Token 已加入记录列表')
       }
@@ -577,26 +497,8 @@ export default {
         expiresIn: this.session.expiresIn,
         tokenSource: this.session.tokenSource,
         taskForm: this.taskForm,
-        xmlFile: this.xmlFile,
-        minInstances: this.resolveMinInstances(),
-        exportWaitSec: this.exportWaitSec,
-        includeInstanceFsm: this.taskForm.includeInstanceFsm,
         runId: this.runId
       }
-    },
-    pickFile () {
-      const input = this.$refs.fileInput
-      if (input) input.click()
-    },
-    onFileChange (e) {
-      const file = e.target && e.target.files && e.target.files[0]
-      if (!file) return
-      if (!file.name.toLowerCase().endsWith('.xml')) {
-        this.$message.warning(MSG.pickXmlWarn)
-        return
-      }
-      this.xmlFile = file
-      this.xmlFileName = file.name
     },
     mergeSession (result) {
       if (!result) return
@@ -650,7 +552,13 @@ export default {
       }
       this.tokenRecords = []
       this.credentialBundle = null
-      clearPartnerSession()
+      clearAllOpenPlatformSessions()
+      if (this.$refs.partnerSession) {
+        this.$refs.partnerSession.boundPartnerId = ''
+        this.$refs.partnerSession.boundToken = ''
+        this.$refs.partnerSession.form.accessToken = ''
+        this.$refs.partnerSession.form.clientSecret = ''
+      }
       this.runId = buildRunId()
       this.taskForm.extTaskId = `EXT-E2E-${this.runId}`
       this.$message.info(MSG.resetInfo)
@@ -660,14 +568,10 @@ export default {
         this.$message.warning(MSG.configAdmin)
         return
       }
-      if (!this.xmlFile) {
-        this.$message.warning(MSG.needXml)
-        return
-      }
       this.running = true
       this.results = []
       try {
-        const list = await runFullManualE2e(this.buildE2eContext())
+        const list = await runBootstrapE2e(this.buildE2eContext())
         list.forEach(r => this.appendResult(r))
         this.lastRunAt = this.formatTime(new Date())
         const failed = list.filter(r => r.status === 'error')
@@ -750,56 +654,6 @@ export default {
           case 'createTask':
             result = await runCreateTaskStep(this.taskForm, this.effectivePartnerId)
             break
-          case 'import':
-            if (!this.session.taskId) {
-              this.$message.warning(MSG.needTask)
-              return
-            }
-            if (!this.xmlFile) {
-              this.$message.warning(MSG.needXmlShort)
-              return
-            }
-            result = await runImportStep(this.session.taskId, this.xmlFile)
-            break
-          case 'taskVerify':
-            result = await runTaskVerifyStep(this.session.taskId)
-            break
-          case 'export':
-            result = await runExportStep(this.session.taskId, {
-              expectJsonOnly: this.taskForm.reportTemplateId === 2001,
-              maxWaitSec: this.exportWaitSec
-            })
-            break
-          case 'webhook':
-            result = await runWebhookStep(this.session.partnerId, this.session.taskId)
-            break
-          case 'instanceFsm':
-            if (!this.session.taskId) {
-              this.$message.warning(MSG.needTask)
-              return
-            }
-            {
-              const fsmList = await runInstanceFsmFlow({
-                taskId: this.session.taskId,
-                partnerId: this.effectivePartnerId,
-                runId: this.runId,
-                exportWaitSec: this.exportWaitSec,
-                includeBatch: this.taskForm.includeBatch,
-                includeFalsePositive: this.taskForm.includeFalsePositive,
-                verifyFixMainMode: this.taskForm.verifyFixMainMode,
-                verifyFixBatchMode: this.taskForm.verifyFixBatchMode,
-                xmlFile: this.xmlFile
-              })
-              fsmList.forEach(item => this.appendResult(item))
-              this.lastRunAt = this.formatTime(new Date())
-              const failed = fsmList.filter(r => r.status === 'error')
-              if (failed.length) {
-                this.$message.error(MSG.flowFail + failed.length + MSG.flowFailSuffix)
-              } else {
-                this.$message.success(MSG.flowOk)
-              }
-              return
-            }
           default:
             return
         }
@@ -814,8 +668,21 @@ export default {
         this.running = false
       }
     },
-    goManualIngest () {
-      this.$router.push({ name: 'MockManualIngest', query: { taskId: this.session.taskId } })
+    goTaskWorkspace () {
+      if (!this.session.taskId) return
+      this.$router.push({
+        name: 'OpenTaskWorkspace',
+        params: { taskId: this.session.taskId }
+      })
+    },
+    goVulnDisposal () {
+      this.$router.push({
+        name: 'VerifyFixOps',
+        query: {
+          partnerId: this.session.partnerId,
+          taskId: this.session.taskId || undefined
+        }
+      })
     },
     goWebhookLog () {
       this.$router.push({
@@ -831,13 +698,6 @@ export default {
     },
     formatTime (d) {
       return this.$moment ? this.$moment(d).format('YYYY-MM-DD HH:mm:ss') : d.toISOString()
-    },
-    resolveMinInstances () {
-      if (!this.taskForm.includeInstanceFsm) return 1
-      let min = 1
-      if (this.taskForm.includeBatch) min = Math.max(min, 3)
-      if (this.taskForm.includeFalsePositive) min = Math.max(min, 4)
-      return min
     }
   }
 }

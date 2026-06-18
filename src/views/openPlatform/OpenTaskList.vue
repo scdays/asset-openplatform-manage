@@ -3,9 +3,9 @@
     <a-breadcrumb>
       <a-breadcrumb-item>开放平台</a-breadcrumb-item>
       <a-breadcrumb-item>
-        <a @click="$router.push({ name: 'OpenPlatformOverview' })">功能总览</a>
+        <a @click="$router.push({ name: 'OpenPlatformOverview' })">控制台</a>
       </a-breadcrumb-item>
-      <a-breadcrumb-item>OPEN 编排任务</a-breadcrumb-item>
+      <a-breadcrumb-item>风险排查</a-breadcrumb-item>
     </a-breadcrumb>
 
     <a-alert

@@ -1,8 +1,8 @@
 <template>
   <div class="p_16 partner-form-page">
     <a-breadcrumb>
-      <a-breadcrumb-item><a @click.prevent="$router.push({ name: 'OpenPlatformOverview' })">功能总览</a></a-breadcrumb-item>
-      <a-breadcrumb-item><a @click.prevent="goList">合作方管理</a></a-breadcrumb-item>
+      <a-breadcrumb-item><a @click.prevent="$router.push({ name: 'OpenPlatformOverview' })">控制台</a></a-breadcrumb-item>
+      <a-breadcrumb-item><a @click.prevent="goList">合作伙伴</a></a-breadcrumb-item>
       <a-breadcrumb-item>{{ isEdit ? '编辑合作方' : '新建合作方' }}</a-breadcrumb-item>
     </a-breadcrumb>
 

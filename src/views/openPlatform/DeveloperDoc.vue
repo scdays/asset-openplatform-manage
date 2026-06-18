@@ -3,14 +3,14 @@
     <a-breadcrumb>
       <a-breadcrumb-item>开放平台</a-breadcrumb-item>
       <a-breadcrumb-item>
-        <a @click="$router.push({ name: 'OpenPlatformOverview' })">功能总览</a>
+        <a @click="$router.push({ name: 'OpenPlatformOverview' })">控制台</a>
       </a-breadcrumb-item>
-      <a-breadcrumb-item>开发者文档</a-breadcrumb-item>
+      <a-breadcrumb-item>开发指南</a-breadcrumb-item>
     </a-breadcrumb>
 
     <a-card :bordered="false" class="developer-doc-switch-card">
       <div class="switch-header">
-        <div class="switch-title">开发者文档（只读）</div>
+        <div class="switch-title">开发指南（只读）</div>
         <a-radio-group v-model="activeTab" button-style="solid" size="small">
           <a-radio-button value="spec">接口规范</a-radio-button>
           <a-radio-button value="swagger">Swagger(OpenAPI)</a-radio-button>

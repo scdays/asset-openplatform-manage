@@ -3,9 +3,9 @@
     <a-breadcrumb>
       <a-breadcrumb-item>开放平台</a-breadcrumb-item>
       <a-breadcrumb-item>
-        <a @click="$router.push({ name: 'OpenPlatformOverview' })">功能总览</a>
+        <a @click="$router.push({ name: 'OpenPlatformOverview' })">控制台</a>
       </a-breadcrumb-item>
-      <a-breadcrumb-item>调用治理</a-breadcrumb-item>
+      <a-breadcrumb-item>流量治理</a-breadcrumb-item>
       <a-breadcrumb-item>
         <a @click="$router.push({ name: 'InvocationList' })">调用记录</a>
       </a-breadcrumb-item>
@@ -15,7 +15,10 @@
     <a-spin :spinning="loading">
       <div v-if="detail" class="detail-header">
         <div>
-          <h2 class="detail-title">{{ detail.operationId }}</h2>
+          <h2 class="detail-title">
+            <enum-tag v-if="detail.operationId" type="apiOperation" :value="detail.operationId" with-code />
+            <span v-else>-</span>
+          </h2>
           <div class="detail-meta">
             <code>{{ detail.requestId }}</code>
             <span> | {{ detail.partnerId }}</span>
@@ -35,7 +38,7 @@
       <div v-if="detail" class="detail-grid">
         <div class="detail-sidebar">
           <a-card title="概要" :bordered="false" class="detail-card">
-            <div class="kv-row"><span class="k">operationId</span><span class="v">{{ detail.operationId }}</span></div>
+            <div class="kv-row"><span class="k">API 操作</span><span class="v"><enum-tag type="apiOperation" :value="detail.operationId" with-code /></span></div>
             <div class="kv-row"><span class="k">业务域</span><span class="v"><enum-tag type="domain" :value="detail.domain" /></span></div>
             <div class="kv-row"><span class="k">HTTP</span><span class="v">{{ detail.httpMethod }} {{ detail.requestPath }}</span></div>
             <div class="kv-row"><span class="k">响应码</span><span class="v"><response-code-tag :value="detail.responseCode" /></span></div>

@@ -3,10 +3,10 @@
     <a-breadcrumb>
       <a-breadcrumb-item>开放平台</a-breadcrumb-item>
       <a-breadcrumb-item>
-        <a @click="$router.push({ name: 'OpenPlatformOverview' })">功能总览</a>
+        <a @click="$router.push({ name: 'OpenPlatformOverview' })">控制台</a>
       </a-breadcrumb-item>
-      <a-breadcrumb-item>调用治理</a-breadcrumb-item>
-      <a-breadcrumb-item>Webhook 投递日志</a-breadcrumb-item>
+      <a-breadcrumb-item>流量治理</a-breadcrumb-item>
+      <a-breadcrumb-item>推送记录</a-breadcrumb-item>
     </a-breadcrumb>
 
     <a-card :bordered="false" class="webhook-search-card">

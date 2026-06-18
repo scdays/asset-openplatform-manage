@@ -88,6 +88,13 @@ export const OPERATION_CASE_TYPES = [
   { value: 'INSTANCE_BATCH', label: '批量实例', color: 'gold' }
 ]
 
+/** 运营案件主资源类型（open_operation_case.primary_resource_type） */
+export const PRIMARY_RESOURCE_TYPES = [
+  { value: 'TASK', label: '扫描任务', color: 'blue' },
+  { value: 'INSTANCE', label: '漏洞实例', color: 'cyan' },
+  { value: 'VERIFY_FIX_JOB', label: '修复核验作业', color: 'purple' }
+]
+
 export const OPERATION_CASE_STATUSES = [
   { value: 'ACCEPTED', label: '已受理', color: 'default' },
   { value: 'RUNNING', label: '进行中', color: 'blue' },
@@ -110,6 +117,53 @@ export const HTTP_METHODS = [
   { value: 'PATCH', label: 'PATCH', color: 'orange' }
 ]
 
+/** OpenAPI operationId（与 api_operation 种子 / OpenApiOperations 对齐） */
+export const API_OPERATIONS = [
+  { value: 'issuePartnerToken', label: '获取 Partner 访问令牌', color: 'purple' },
+  { value: 'createTask', label: '创建扫描任务（已废弃）', color: 'default' },
+  { value: 'createTaskByJson', label: '创建扫描任务（JSON）', color: 'blue' },
+  { value: 'createTaskByFile', label: '创建扫描任务（XML 配置）', color: 'blue' },
+  { value: 'createTaskByUpload', label: '创建扫描任务（上传文件）', color: 'blue' },
+  { value: 'listTasks', label: '分页查询任务列表', color: 'blue' },
+  { value: 'getTask', label: '查询任务进度', color: 'blue' },
+  { value: 'searchInstances', label: '搜索漏洞实例', color: 'cyan' },
+  { value: 'getInstance', label: '获取漏洞实例详情', color: 'cyan' },
+  { value: 'verifyInstance', label: '验证漏洞实例', color: 'cyan' },
+  { value: 'verifyInstanceBatch', label: '批量验证漏洞实例', color: 'cyan' },
+  { value: 'remediateInstance', label: '处置修复（单条）', color: 'cyan' },
+  { value: 'remediateInstanceBatch', label: '批量处置修复', color: 'cyan' },
+  { value: 'archiveInstance', label: '处置备案（单条）', color: 'cyan' },
+  { value: 'archiveInstanceLegacy', label: '处置备案（兼容别名）', color: 'default' },
+  { value: 'verifyFixInstance', label: '修复核验（单条）', color: 'cyan' },
+  { value: 'verifyFixInstanceBatch', label: '批量修复核验', color: 'cyan' },
+  { value: 'getExport', label: '查询外发包元数据', color: 'gold' },
+  { value: 'downloadExport', label: '下载外发文件', color: 'gold' },
+  { value: 'listTaskExports', label: '查询任务外发列表', color: 'gold' }
+]
+
+/** 附录 A · vulInfoStat */
+export const VUL_INFO_STATS = [
+  { value: 0, label: '潜在预警', color: 'default' },
+  { value: 1, label: '初始发现', color: 'blue' },
+  { value: 2, label: '已验证有效', color: 'green' },
+  { value: 3, label: '已验证误报', color: 'orange' },
+  { value: 5, label: '已修复', color: 'cyan' },
+  { value: 6, label: '核验修复', color: 'green' },
+  { value: 7, label: '核验未修复', color: 'red' },
+  { value: 8, label: '验证失败', color: 'red' },
+  { value: 9, label: '修复失败', color: 'red' },
+  { value: 10, label: '核验失败', color: 'red' }
+]
+
+/** 危害等级 vulLevel（部侧码表） */
+export const VUL_LEVELS = [
+  { value: 0, label: '信息', color: 'default' },
+  { value: 1, label: '低危', color: 'green' },
+  { value: 2, label: '中危', color: 'gold' },
+  { value: 3, label: '高危', color: 'orange' },
+  { value: 4, label: '超危', color: 'red' }
+]
+
 const REGISTRY = {
   partnerStatus: buildMap(PARTNER_STATUSES),
   partnerType: buildMap(PARTNER_TYPES),
@@ -122,9 +176,13 @@ const REGISTRY = {
   webhookEventType: buildMap(WEBHOOK_EVENT_TYPES),
   openTaskStatus: buildMap(OPEN_TASK_STATUSES),
   operationCaseType: buildMap(OPERATION_CASE_TYPES),
+  primaryResourceType: buildMap(PRIMARY_RESOURCE_TYPES),
   operationCaseStatus: buildMap(OPERATION_CASE_STATUSES),
   mockIngestMode: buildMap(MOCK_INGEST_MODES),
-  httpMethod: buildMap(HTTP_METHODS)
+  httpMethod: buildMap(HTTP_METHODS),
+  apiOperation: buildMap(API_OPERATIONS),
+  vulInfoStat: buildMap(VUL_INFO_STATS),
+  vulLevel: buildMap(VUL_LEVELS)
 }
 
 const OPTIONS_REGISTRY = {
@@ -139,9 +197,13 @@ const OPTIONS_REGISTRY = {
   webhookEventType: WEBHOOK_EVENT_TYPES,
   openTaskStatus: OPEN_TASK_STATUSES,
   operationCaseType: OPERATION_CASE_TYPES,
+  primaryResourceType: PRIMARY_RESOURCE_TYPES,
   operationCaseStatus: OPERATION_CASE_STATUSES,
   mockIngestMode: MOCK_INGEST_MODES,
-  httpMethod: HTTP_METHODS
+  httpMethod: HTTP_METHODS,
+  apiOperation: API_OPERATIONS,
+  vulInfoStat: VUL_INFO_STATS,
+  vulLevel: VUL_LEVELS
 }
 
 export function labelOf (type, value, fallback) {
@@ -154,6 +216,15 @@ export function labelOf (type, value, fallback) {
     return item.label
   }
   return fallback !== undefined ? fallback : key
+}
+
+/** 中文标签(原始值)，如 初始发现(1)、批量验证漏洞实例(verifyInstanceBatch) */
+export function labelWithCode (type, value, fallback) {
+  if (value === undefined || value === null || value === '') {
+    return fallback !== undefined ? fallback : '-'
+  }
+  const label = labelOf(type, value, String(value))
+  return `${label}(${value})`
 }
 
 export function colorOf (type, value, fallback) {

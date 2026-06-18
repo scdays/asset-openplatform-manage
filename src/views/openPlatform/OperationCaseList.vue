@@ -3,7 +3,7 @@
     <a-breadcrumb>
       <a-breadcrumb-item>开放平台</a-breadcrumb-item>
       <a-breadcrumb-item>
-        <a @click="$router.push({ name: 'OpenPlatformOverview' })">功能总览</a>
+        <a @click="$router.push({ name: 'OpenPlatformOverview' })">控制台</a>
       </a-breadcrumb-item>
       <a-breadcrumb-item>运营案件</a-breadcrumb-item>
     </a-breadcrumb>
@@ -98,6 +98,10 @@
         <span slot="status" slot-scope="text">
           <enum-tag type="operationCaseStatus" :value="text" />
         </span>
+        <span slot="primaryResourceType" slot-scope="text">
+          <enum-tag v-if="text" type="primaryResourceType" :value="text" with-code />
+          <span v-else class="muted">-</span>
+        </span>
         <span slot="primaryResourceId" slot-scope="text">
           <code v-if="text">{{ text }}</code>
           <span v-else class="muted">-</span>
@@ -123,7 +127,8 @@ const columns = [
   { title: '类型', dataIndex: 'caseType', scopedSlots: { customRender: 'caseType' }, width: 130 },
   { title: '状态', dataIndex: 'status', scopedSlots: { customRender: 'status' }, width: 100 },
   { title: 'partnerId', dataIndex: 'partnerId', width: 120, ellipsis: true },
-  { title: '主资源', dataIndex: 'primaryResourceId', scopedSlots: { customRender: 'primaryResourceId' }, width: 140 },
+  { title: '主资源类型', dataIndex: 'primaryResourceType', scopedSlots: { customRender: 'primaryResourceType' }, width: 150 },
+  { title: '主资源 ID', dataIndex: 'primaryResourceId', scopedSlots: { customRender: 'primaryResourceId' }, width: 140 },
   { title: '开始时间', dataIndex: 'startedAt', scopedSlots: { customRender: 'startedAt' }, width: 170 },
   { title: '操作', scopedSlots: { customRender: 'action' }, width: 90, fixed: 'right' }
 ]

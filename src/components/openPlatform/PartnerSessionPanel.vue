@@ -20,7 +20,7 @@
     />
 
     <a-form layout="vertical" class="partner-session-form">
-      <a-form-item label="接入方（合作方管理已注册）" required>
+      <a-form-item label="接入方（合作伙伴已注册）" required>
         <a-select
           v-model="form.partnerId"
           show-search
@@ -114,7 +114,8 @@
 <script>
 import { listPartners, listCredentials } from '@/api/partner'
 import { bindPartnerAuth, fetchOAuthToken } from '@/api/openPlatform/openPartnerApi'
-import { getPartnerSession, clearPartnerSession } from '@/utils/openPartnerRequest'
+import { getPartnerSession } from '@/utils/openPartnerRequest'
+import { clearAllOpenPlatformSessions } from '@/utils/openPlatformSession'
 import { loadPartnerSessionFromStorage } from '@/utils/partnerSessionStorage'
 import { normalizeListPayload } from '@/utils/openApiPayload'
 import { hasOpenApiAdminKey } from '@/utils/openPlatformRuntime'
@@ -130,7 +131,7 @@ export default {
     },
     hintDesc: {
       type: String,
-      default: '选择已在「合作方管理」注册的接入方，粘贴其 Token 或用凭证换取。会话在本浏览器标签内共享（修复核验运营、SOC 编排等），无需每次走 Mock 全流程新建 Partner。'
+      default: '选择已在「合作伙伴」注册的接入方，粘贴其 Token 或用凭证换取。会话在本浏览器标签内共享（处置测试、任务工作台等），清除会话将同时清空联调缓存。'
     }
   },
   data () {
@@ -290,12 +291,12 @@ export default {
       }
     },
     clearSession () {
-      clearPartnerSession()
+      clearAllOpenPlatformSessions()
       this.boundPartnerId = ''
       this.boundToken = ''
       this.form.accessToken = ''
       this.form.clientSecret = ''
-      this.$message.info('已清除接入方会话')
+      this.$message.info('已清除接入方会话与联调缓存')
       this.$emit('cleared')
     },
     goPartnerDetail () {

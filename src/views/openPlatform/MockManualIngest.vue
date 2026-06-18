@@ -3,7 +3,7 @@
     <a-breadcrumb>
       <a-breadcrumb-item>开放平台</a-breadcrumb-item>
       <a-breadcrumb-item>
-        <a @click="$router.push({ name: 'OpenPlatformOverview' })">功能总览</a>
+        <a @click="$router.push({ name: 'OpenPlatformOverview' })">控制台</a>
       </a-breadcrumb-item>
       <a-breadcrumb-item>Mock 联调</a-breadcrumb-item>
       <a-breadcrumb-item>半人工报告导入</a-breadcrumb-item>

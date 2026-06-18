@@ -3,9 +3,9 @@
     <a-breadcrumb>
       <a-breadcrumb-item>开放平台</a-breadcrumb-item>
       <a-breadcrumb-item>
-        <a @click="$router.push({ name: 'OpenPlatformOverview' })">功能总览</a>
+        <a @click="$router.push({ name: 'OpenPlatformOverview' })">控制台</a>
       </a-breadcrumb-item>
-      <a-breadcrumb-item>调用治理</a-breadcrumb-item>
+      <a-breadcrumb-item>流量治理</a-breadcrumb-item>
       <a-breadcrumb-item>调用记录</a-breadcrumb-item>
     </a-breadcrumb>
 
@@ -31,8 +31,8 @@
             </a-form-item>
           </a-col>
           <a-col :xs="24" :sm="12" :xl="4">
-            <a-form-item label="operationId">
-              <a-input v-model="queryParam.operationId" placeholder="例如 verifyInstance" allow-clear />
+            <a-form-item label="API 操作">
+              <a-input v-model="queryParam.operationId" placeholder="如 verifyInstanceBatch" allow-clear />
             </a-form-item>
           </a-col>
           <a-col :xs="24" :sm="12" :xl="4">
@@ -86,6 +86,10 @@
         <span slot="domain" slot-scope="text">
           <enum-tag type="domain" :value="text" />
         </span>
+        <span slot="operationId" slot-scope="text">
+          <enum-tag v-if="text" type="apiOperation" :value="text" with-code />
+          <span v-else>-</span>
+        </span>
         <span slot="resourceId" slot-scope="text">
           <code v-if="text">{{ text }}</code>
           <span v-else>-</span>
@@ -128,7 +132,7 @@ const columns = [
   { title: 'requestId', dataIndex: 'requestId', ellipsis: true, width: 200 },
   { title: 'partnerId', dataIndex: 'partnerId', width: 140 },
   { title: '业务域', dataIndex: 'domain', scopedSlots: { customRender: 'domain' }, width: 100 },
-  { title: 'operationId', dataIndex: 'operationId', width: 140 },
+  { title: 'API 操作', dataIndex: 'operationId', scopedSlots: { customRender: 'operationId' }, width: 200 },
   { title: 'resourceId', dataIndex: 'resourceId', scopedSlots: { customRender: 'resourceId' }, width: 140 },
   { title: 'caseId', dataIndex: 'caseId', scopedSlots: { customRender: 'caseId' }, width: 140 },
   { title: '响应码', dataIndex: 'responseCode', scopedSlots: { customRender: 'responseCode' }, width: 140 },

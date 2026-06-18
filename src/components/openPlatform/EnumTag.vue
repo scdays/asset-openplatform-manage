@@ -11,7 +11,7 @@
 </template>
 
 <script>
-import { labelOf, colorOf } from '@/constants/openPlatformDisplay'
+import { labelOf, colorOf, labelWithCode } from '@/constants/openPlatformDisplay'
 
 export default {
   name: 'EnumTag',
@@ -35,6 +35,10 @@ export default {
     fallback: {
       type: String,
       default: undefined
+    },
+    withCode: {
+      type: Boolean,
+      default: false
     }
   },
   computed: {
@@ -45,6 +49,9 @@ export default {
       return this.hasValue ? String(this.value) : ''
     },
     displayLabel () {
+      if (this.withCode) {
+        return labelWithCode(this.type, this.value, this.fallback !== undefined ? this.fallback : this.rawValue)
+      }
       return labelOf(this.type, this.value, this.fallback !== undefined ? this.fallback : this.rawValue)
     },
     tagColor () {

@@ -121,21 +121,28 @@ export function getInstance (vulInfoId) {
   return openPartnerRequest.get(`/api/open/v1/instances/${encodeURIComponent(vulInfoId)}`, { silent: true })
 }
 
-function postBatch (path, items, idempotencyKey) {
-  return openPartnerRequest.post(path, { items }, {
+function postBatch (path, body, idempotencyKey) {
+  const payload = body && body.items ? body : { items: body }
+  return openPartnerRequest.post(path, payload, {
     silent: true,
     headers: idempotencyHeaders(idempotencyKey)
   })
 }
 
-export function verifyInstanceBatch (items, idempotencyKey) {
-  return postBatch('/api/open/v1/instances/verify:batch', items, idempotencyKey)
+/** @param request {{ operator: string, items: object[] }} */
+export function verifyInstanceBatch (request, idempotencyKey) {
+  const body = request && request.items
+    ? request
+    : { operator: '', items: Array.isArray(request) ? request : [] }
+  return postBatch('/api/open/v1/instances/verify:batch', body, idempotencyKey)
 }
 
-export function remediateInstanceBatch (items, idempotencyKey) {
-  return postBatch('/api/open/v1/instances/remediate:batch', items, idempotencyKey)
+/** @param request {{ items: object[] }} */
+export function remediateInstanceBatch (request, idempotencyKey) {
+  return postBatch('/api/open/v1/instances/remediate:batch', request, idempotencyKey)
 }
 
-export function verifyFixInstanceBatch (items, idempotencyKey) {
-  return postBatch('/api/open/v1/instances/verify-fix:batch', items, idempotencyKey)
+/** @param request {{ items: object[] }} */
+export function verifyFixInstanceBatch (request, idempotencyKey) {
+  return postBatch('/api/open/v1/instances/verify-fix:batch', request, idempotencyKey)
 }

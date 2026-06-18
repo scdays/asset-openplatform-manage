@@ -61,7 +61,7 @@
             </a-table>
           </a-tab-pane>
           <a-tab-pane key="invocations" tab="关联调用">
-            <p class="helper">按 partnerId + resourceId 查询调用治理中同源 API 调用（近 10 条）</p>
+            <p class="helper">按 partnerId + resourceId 查询流量治理中同源 API 调用（近 10 条）</p>
             <a-table
               size="small"
               row-key="invocationId"
@@ -69,6 +69,10 @@
               :columns="invocationColumns"
               :data-source="detail.relatedInvocations || []"
             >
+              <span slot="operationId" slot-scope="text">
+                <enum-tag v-if="text" type="apiOperation" :value="text" with-code />
+                <span v-else>-</span>
+              </span>
               <span slot="responseCode" slot-scope="text"><response-code-tag :value="text" /></span>
               <span slot="action" slot-scope="text, record">
                 <a @click="goInvocationDetail(record)">详情</a>
@@ -122,7 +126,7 @@ const historyColumns = [
 ]
 
 const invocationColumns = [
-  { title: 'operationId', dataIndex: 'operationId', width: 140 },
+  { title: 'API 操作', dataIndex: 'operationId', scopedSlots: { customRender: 'operationId' }, width: 200 },
   { title: 'resourceId', dataIndex: 'resourceId', width: 160 },
   { title: '响应码', dataIndex: 'responseCode', scopedSlots: { customRender: 'responseCode' }, width: 140 },
   { title: '开始时间', dataIndex: 'startedAt', width: 170 },

@@ -2,11 +2,17 @@
   <div v-if="payload">
     <a-descriptions bordered size="small" :column="1">
       <a-descriptions-item label="vulInfoId"><code>{{ payload.vulInfoId || '-' }}</code></a-descriptions-item>
-      <a-descriptions-item label="当前状态">{{ payload.vulInfoStat != null ? payload.vulInfoStat : '-' }}</a-descriptions-item>
+      <a-descriptions-item label="当前状态">
+        <enum-tag v-if="payload.vulInfoStat != null && payload.vulInfoStat !== ''" type="vulInfoStat" :value="payload.vulInfoStat" with-code />
+        <span v-else>-</span>
+      </a-descriptions-item>
       <a-descriptions-item label="taskId">{{ payload.taskId || '-' }}</a-descriptions-item>
       <a-descriptions-item label="漏洞名称">{{ payload.vulName || '-' }}</a-descriptions-item>
       <a-descriptions-item label="地址">{{ payload.vulNetAddr || '-' }}</a-descriptions-item>
-      <a-descriptions-item label="operationId">{{ payload.operationId || '-' }}</a-descriptions-item>
+      <a-descriptions-item label="API 操作">
+        <enum-tag v-if="payload.operationId" type="apiOperation" :value="payload.operationId" with-code />
+        <span v-else>-</span>
+      </a-descriptions-item>
     </a-descriptions>
     <div v-if="payload.requestSummaryJson" class="json-block">
       <div class="label">请求摘要</div>
@@ -21,8 +27,11 @@
 </template>
 
 <script>
+import EnumTag from '@/components/openPlatform/EnumTag'
+
 export default {
   name: 'InstanceOpCasePanel',
+  components: { EnumTag },
   props: {
     payload: { type: Object, default: null }
   }

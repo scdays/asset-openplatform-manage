@@ -7,7 +7,7 @@
           <a-tab-pane key="summary" tab="概要">
             <div class="kv-row"><span class="k">requestId</span><span class="v"><code>{{ detail.requestId }}</code></span></div>
             <div class="kv-row"><span class="k">partnerId</span><span class="v">{{ detail.partnerId }}</span></div>
-            <div class="kv-row"><span class="k">operationId</span><span class="v">{{ detail.operationId }}</span></div>
+            <div class="kv-row"><span class="k">API 操作</span><span class="v"><enum-tag v-if="detail.operationId" type="apiOperation" :value="detail.operationId" with-code /><span v-else>-</span></span></div>
             <div class="kv-row"><span class="k">业务域</span><span class="v"><enum-tag type="domain" :value="detail.domain" /></span></div>
             <div class="kv-row"><span class="k">HTTP</span><span class="v">{{ detail.httpMethod }} {{ detail.requestPath }}</span></div>
             <div class="kv-row"><span class="k">响应码</span><span class="v"><response-code-tag :value="detail.responseCode" /></span></div>
@@ -69,6 +69,7 @@
 
 <script>
 import { getInvocationDetail, getInvocationRequestBody, getInvocationResponseBody } from '@/api/openPlatform/invocation'
+import { labelWithCode } from '@/constants/openPlatformDisplay'
 import EnumTag from '@/components/openPlatform/EnumTag'
 import ResponseCodeTag from '@/components/openPlatform/ResponseCodeTag'
 import InvocationRequestBodyModal from './InvocationRequestBodyModal'
@@ -88,7 +89,9 @@ export default {
   data () { return { loading: false, detail: null, activeTab: 'summary', webhookColumns, requestBodyVisible: false, responseBodyVisible: false } },
   computed: {
     drawerTitle () {
-      if (this.detail && this.detail.operationId) return '调用预览 - ' + this.detail.operationId
+      if (this.detail && this.detail.operationId) {
+        return '调用预览 - ' + labelWithCode('apiOperation', this.detail.operationId)
+      }
       return '调用预览 - 加载中...'
     }
   },

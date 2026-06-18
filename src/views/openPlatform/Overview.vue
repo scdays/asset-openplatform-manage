@@ -2,7 +2,7 @@
   <div class="p_16 overview-page">
     <a-breadcrumb>
       <a-breadcrumb-item>开放平台</a-breadcrumb-item>
-      <a-breadcrumb-item>功能总览 / 站点地图</a-breadcrumb-item>
+      <a-breadcrumb-item>控制台 / 站点地图</a-breadcrumb-item>
     </a-breadcrumb>
 
     <a-card :bordered="false" style="margin: 16px 0;">
@@ -48,7 +48,7 @@ const items = [
   {
     key: 'partner',
     phase: 'P0',
-    title: '合作方管理',
+    title: '合作伙伴',
     routeName: 'PartnerList',
     lines: [
       '列表：GET /internal/admin/partners',
@@ -59,7 +59,7 @@ const items = [
   {
     key: 'invocation',
     phase: 'P1',
-    title: 'API 调用记录',
+    title: '流量治理',
     routeName: 'InvocationList',
     lines: [
       '调用列表与筛选',
@@ -70,77 +70,12 @@ const items = [
   {
     key: 'webhook',
     phase: 'P1',
-    title: 'Webhook 投递',
+    title: '推送记录',
     routeName: 'WebhookDeliveryList',
     lines: [
       '投递日志查询',
       'HTTP 状态与重试次数',
       '支持按 Partner / 事件类型过滤'
-    ]
-  },
-  {
-    key: 'dashboard',
-    phase: 'P3',
-    title: '运营看板',
-    lines: [
-      '全局调用量 / 成功率',
-      '按 Partner / API 维度分析',
-      '错误码 Top 与趋势'
-    ]
-  },
-  {
-    key: 'catalog',
-    phase: 'P2',
-    title: 'API 目录',
-    routeName: 'ApiCatalog',
-    lines: [
-      'api_operation 只读展示',
-      '能力码与路径映射',
-      '与 OpenAPI 保持一致'
-    ]
-  },
-  {
-    key: 'developerDoc',
-    phase: 'P2',
-    title: '开发者文档',
-    routeName: 'DeveloperDoc',
-    lines: [
-      '支持查看接口规范',
-      '支持跳转 Swagger / OpenAPI',
-      '仅提供只读能力'
-    ]
-  },
-  {
-    key: 'mockManual',
-    phase: 'P1',
-    title: 'Mock 半人工导入',
-    routeName: 'MockManualIngest',
-    lines: [
-      'manual ingest 模式联调',
-      'dispatch-packet / 预览 / 导入 XML',
-      '触发 FINISHED + 实例入库'
-    ]
-  },
-  {
-    key: 'mockE2e',
-    phase: 'P1',
-    title: 'Mock 全流程联调控制台',
-    routeName: 'MockE2eConsole',
-    lines: [
-      '一键跑通 manual mock 全链路',
-      'Partner / Token / 任务 / 导入 / 外发 / Webhook',
-      '可替代 e2e-mock-manual-flow.ps1 脚本'
-    ]
-  },
-  {
-    key: 'openTaskList',
-    phase: 'W1',
-    title: 'OPEN 编排任务',
-    routeName: 'OpenTaskList',
-    lines: [
-      '跨接入方 open_task 列表',
-      'scanTemplateId / autoVerify / 交叉扫描',
-      '进入任务实例工作台（可与运营案件互跳）'
     ]
   },
   {
@@ -155,36 +90,90 @@ const items = [
     ]
   },
   {
-    key: 'socOrch',
+    key: 'openTaskList',
     phase: 'W1',
-    title: 'SOC 编排监控',
-    routeName: 'OpenSocOrchestration',
+    title: '风险排查',
+    routeName: 'OpenTaskList',
     lines: [
-      '选择接入方（Webhook 投递）',
-      '关联离线导入 taskId，创建内部修复核验任务',
-      '复扫 XML 比对 → 6/7，仅 INSTANCE_VERIFY_FIX_COMPLETED'
+      '跨接入方 open_task 列表',
+      'scanTemplateId / autoVerify / 交叉扫描',
+      '进入任务实例工作台（可与运营案件互跳）'
+    ]
+  },
+  {
+    key: 'verifyFixJobs',
+    phase: 'W3',
+    title: '修复核验',
+    routeName: 'VerifyFixJobList',
+    lines: [
+      'open_verify_fix_job 列表',
+      '复扫子任务 · 报告路径 · 6/7/10',
+      '对标风险排查工作台'
+    ]
+  },
+  {
+    key: 'mockE2e',
+    phase: 'P1',
+    title: '接入测试',
+    routeName: 'MockE2eConsole',
+    lines: [
+      'Partner 注册、Token、建任务',
+      '任务状态 RUNNING，后续在工作台导入',
+      '处置测试页走 Partner Open API'
     ]
   },
   {
     key: 'verifyFixOps',
     phase: 'W3',
-    title: '修复核验运营',
+    title: '处置测试',
     routeName: 'VerifyFixOps',
     lines: [
-      '从 open_vuln_instance 多选实例',
-      '验证/误报/处置/创建内部修复核验作业',
-      '完成作业 → 仅 INSTANCE_VERIFY_FIX_COMPLETED'
+      'Partner API：验证 / 处置修复 / 修复核验受理',
+      '多选实例，请求体自动补全',
+      '运营跟踪请使用「修复核验」工作台'
     ]
   },
   {
     key: 'quota',
     phase: 'P2',
-    title: '配额与限流',
+    title: '流控策略',
     routeName: 'QuotaLimit',
     lines: [
       'Partner 级 QPS 统计',
       '429 触发趋势',
       '日配额使用率'
+    ]
+  },
+  {
+    key: 'catalog',
+    phase: 'P2',
+    title: '接口目录',
+    routeName: 'ApiCatalog',
+    lines: [
+      'api_operation 只读展示',
+      '能力码与路径映射',
+      '与 OpenAPI 保持一致'
+    ]
+  },
+  {
+    key: 'developerDoc',
+    phase: 'P2',
+    title: '开发指南',
+    routeName: 'DeveloperDoc',
+    lines: [
+      '支持查看接口规范',
+      '支持跳转 Swagger / OpenAPI',
+      '仅提供只读能力'
+    ]
+  },
+  {
+    key: 'dashboard',
+    phase: 'P3',
+    title: '运营看板',
+    lines: [
+      '全局调用量 / 成功率',
+      '按 Partner / API 维度分析',
+      '错误码 Top 与趋势'
     ]
   },
   {

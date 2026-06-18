@@ -3,7 +3,7 @@
     <a-breadcrumb>
       <a-breadcrumb-item>开放平台</a-breadcrumb-item>
       <a-breadcrumb-item>
-        <a @click="$router.push({ name: 'OpenTaskList' })">OPEN 编排任务</a>
+        <a @click="$router.push({ name: 'OpenTaskList' })">风险排查</a>
       </a-breadcrumb-item>
       <a-breadcrumb-item>任务实例工作台</a-breadcrumb-item>
     </a-breadcrumb>
@@ -572,6 +572,14 @@ export default {
       handler (id) {
         if (id) this.loadWorkspace(id)
       }
+    },
+    '$route.query.tab': {
+      immediate: true,
+      handler (tab) {
+        if (tab && ['overview', 'survey', 'surveyResults', 'verify', 'merge', 'lifecycle', 'callback'].includes(tab)) {
+          this.activeTab = tab
+        }
+      }
     }
   },
   methods: {
@@ -610,6 +618,14 @@ export default {
         .finally(() => {
           this.refreshing = false
         })
+    },
+    goVulnDisposal () {
+      const task = this.workspace && this.workspace.task
+      if (!task) return
+      this.$router.push({
+        name: 'VerifyFixOps',
+        query: { partnerId: task.partnerId, taskId: task.taskId }
+      })
     },
     loadWorkspace (taskId) {
       this.loading = true
@@ -856,6 +872,9 @@ export default {
   color: rgba(0, 0, 0, 0.45);
   font-family: Consolas, monospace;
   margin-left: 12px;
+}
+.workspace-link-row {
+  margin-top: 12px;
 }
 .muted {
   color: rgba(0, 0, 0, 0.25);

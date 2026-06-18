@@ -12,6 +12,7 @@
           <a-button size="small" @click="downloadBody">下载 TXT</a-button>
         </div>
         <pre class="code-block">{{ payload.bodyFormatted }}</pre>
+        <invocation-enum-hints :json-text="payload.bodyFormatted" />
       </div>
       <a-empty v-else-if="!loading" description="暂无请求报文" />
     </a-spin>
@@ -20,9 +21,11 @@
 
 <script>
 import { getInvocationRequestBody } from '@/api/openPlatform/invocation'
+import InvocationEnumHints from '@/components/openPlatform/InvocationEnumHints'
 
 export default {
   name: 'InvocationRequestBodyModal',
+  components: { InvocationEnumHints },
   props: {
     visible: { type: Boolean, default: false },
     invocationId: { type: String, default: '' }

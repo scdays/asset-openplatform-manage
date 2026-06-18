@@ -1,8 +1,8 @@
 <template>
   <div class="p_16 partner-detail-page">
     <a-breadcrumb>
-      <a-breadcrumb-item><a @click.prevent="$router.push({ name: 'OpenPlatformOverview' })">功能总览</a></a-breadcrumb-item>
-      <a-breadcrumb-item><a @click.prevent="goList">合作方管理</a></a-breadcrumb-item>
+      <a-breadcrumb-item><a @click.prevent="$router.push({ name: 'OpenPlatformOverview' })">控制台</a></a-breadcrumb-item>
+      <a-breadcrumb-item><a @click.prevent="goList">合作伙伴</a></a-breadcrumb-item>
       <a-breadcrumb-item>{{ partner.partnerName || partnerId }}</a-breadcrumb-item>
     </a-breadcrumb>
 
@@ -22,8 +22,7 @@
             <a-dropdown>
               <a-button>运营联调 <a-icon type="down" /></a-button>
               <a-menu slot="overlay">
-                <a-menu-item @click="goVerifyFixOps">修复核验运营</a-menu-item>
-                <a-menu-item @click="goSocOrch">SOC 编排监控</a-menu-item>
+                <a-menu-item @click="goVerifyFixOps">处置测试</a-menu-item>
               </a-menu>
             </a-dropdown>
             <a-button style="margin-left: 8px;" @click="goEdit">编辑</a-button>
@@ -352,9 +351,6 @@ export default {
     },
     goVerifyFixOps () {
       this.$router.push({ name: 'VerifyFixOps', query: { partnerId: this.partnerId } })
-    },
-    goSocOrch () {
-      this.$router.push({ name: 'OpenSocOrchestration', query: { partnerId: this.partnerId } })
     },
     openWebhookSecretRotate () {
       this.webhookSecretPrefill = null

@@ -57,6 +57,71 @@ function buildTransferTime () {
   return String(Math.floor(Date.now() / 1000))
 }
 
+/** 漏洞验证单条 item（§5.3.2 items[]，不含顶层 operator） */
+export function buildVerifyBatchItem (vulInfoID, verifyResult = 'VALID', extra = {}) {
+  const item = {
+    vulInfoID,
+    verifyResult,
+    transferTime: buildTransferTime(),
+    ...extra
+  }
+  delete item.operator
+  if (verifyResult === 'VALID') {
+    item.srcMethod = extra.srcMethod != null ? extra.srcMethod : 1021
+  }
+  return item
+}
+
+/** 漏洞验证批量请求体（§5.3.2：operator 在顶层） */
+export function buildVerifyBatchRequest (vulInfoIds, verifyResult = 'VALID', operator, extra = {}) {
+  const op = operator || extra.operator || 'disposal-console@partner.local'
+  return {
+    operator: op,
+    items: (vulInfoIds || []).map(id => buildVerifyBatchItem(id, verifyResult, extra))
+  }
+}
+
+/** 漏洞验证请求体（§5.3.1 单条） */
+export function buildVerifyBody (verifyResult = 'VALID', extra = {}) {
+  const body = {
+    verifyResult,
+    operator: extra.operator || 'disposal-console@partner.local',
+    transferTime: buildTransferTime(),
+    ...extra
+  }
+  if (verifyResult === 'VALID') {
+    body.srcMethod = extra.srcMethod != null ? extra.srcMethod : 1021
+  }
+  return body
+}
+
+/** 处置修复批量 item（§5.4.2） */
+export function buildRemediateBatchItem (vulInfoID, extra = {}) {
+  return {
+    vulInfoID,
+    ...buildRemediateBody({
+      remedDesc: extra.remedDesc || `disposal ${vulInfoID}`,
+      ...extra
+    })
+  }
+}
+
+/** 修复核验批量 item（§5.5.2） */
+export function buildVerifyFixBatchItem (vulInfoID, extra = {}) {
+  return {
+    vulInfoID,
+    ...buildVerifyFixBody(extra)
+  }
+}
+
+/** 修复核验受理请求体（§5.5） */
+export function buildVerifyFixBody (extra = {}) {
+  return {
+    transferTime: buildTransferTime(),
+    ...extra
+  }
+}
+
 /** 处置修复完整报文（含工单字段，2→5） */
 export function buildRemediateBody (extra = {}) {
   return {
@@ -70,7 +135,9 @@ export function buildRemediateBody (extra = {}) {
     assignerDept: '安全运营部',
     handlerDept: '运维部',
     assignerEmail: 'assigner@e2e.console.local',
+    assignerPhone: '010-10000001',
     handlerEmail: 'handler@e2e.console.local',
+    handlerPhone: '010-10000002',
     transferTime: buildTransferTime(),
     ...extra
   }
@@ -155,11 +222,21 @@ export async function runCreateTaskStep (taskForm, partnerId) {
     const expectRunning = taskForm.expectManualMode !== false
     if (expectRunning && status !== 'RUNNING') {
       return stepResult('createTask', '创建扫描任务', 'error',
-        `manual 模式期望 RUNNING，实际 ${status}（请确认 profile=mock-manual）`, { taskId, status })
+        `manual 模式期望 RUNNING，实际 ${status}（mock 环境请确认 profile=mock-manual；task-center 为正常 RUNNING）`, { taskId, status })
     }
-    const dispatch = await getDispatchPacket(taskId)
-    return stepResult('createTask', '创建扫描任务', 'success',
-      `taskId=${taskId} status=${status}`, { taskId, status, dispatch, partnerId })
+    let dispatch = null
+    try {
+      dispatch = await getDispatchPacket(taskId)
+    } catch (e) {
+      const httpStatus = e.response && e.response.status
+      if (httpStatus !== 404) {
+        return stepResult('createTask', '创建扫描任务', 'error', e.message || '查询 dispatch-packet 失败', { taskId, status })
+      }
+    }
+    const detail = dispatch
+      ? `taskId=${taskId} status=${status}`
+      : `taskId=${taskId} status=${status}（task-center 模式，后续请在工作台完成扫描入库）`
+    return stepResult('createTask', '创建扫描任务', 'success', detail, { taskId, status, dispatch, partnerId })
   } catch (e) {
     return stepResult('createTask', '创建扫描任务', 'error', e.message || '建任务失败')
   }
@@ -317,13 +394,13 @@ export async function runWebhookStep (partnerId, resourceId, options = {}) {
     }
     const missing = types.filter(t => (counts[t] || 0) < 1)
     if (missing.length) {
-      return stepResult('webhook', 'Webhook 投递日志', 'error',
+      return stepResult('webhook', '推送记录', 'error',
         `缺少事件：${missing.join('、')}`, { counts })
     }
-    return stepResult('webhook', 'Webhook 投递日志', 'success',
+    return stepResult('webhook', '推送记录', 'success',
       types.map(t => `${t}×${counts[t]}`).join('，'), { counts })
   } catch (e) {
-    return stepResult('webhook', 'Webhook 投递日志', 'error', e.message || '查询失败')
+    return stepResult('webhook', '推送记录', 'error', e.message || '查询失败')
   }
 }
 
@@ -493,25 +570,29 @@ export async function runInstanceBatchStep (ids, runId, options = {}) {
   }
   const batchMode = options.batchVerifyFixMode || 'allUnfixed'
   try {
-    await verifyInstanceBatch([
-      { vulInfoID: b1, verifyResult: 'VALID', srcMethod: 1021, operator: 'e2e@console.local' },
-      { vulInfoID: b2, verifyResult: 'VALID', srcMethod: 1021, operator: 'e2e@console.local' }
-    ], `e2e-batch-v-${runId}`)
+    await verifyInstanceBatch(
+      buildVerifyBatchRequest([b1, b2], 'VALID', 'e2e@console.local'),
+      `e2e-batch-v-${runId}`
+    )
     await assertInstanceStat(b1, 2)
     await assertInstanceStat(b2, 2)
 
     const remBody = (desc) => buildRemediateBody({ remedDesc: desc })
-    await remediateInstanceBatch([
-      { vulInfoID: b1, ...remBody('batch fix 1') },
-      { vulInfoID: b2, ...remBody('batch fix 2') }
-    ], `e2e-batch-r-${runId}`)
+    await remediateInstanceBatch({
+      items: [
+        { vulInfoID: b1, ...remBody('batch fix 1') },
+        { vulInfoID: b2, ...remBody('batch fix 2') }
+      ]
+    }, `e2e-batch-r-${runId}`)
     await assertInstanceStat(b1, 5)
     await assertInstanceStat(b2, 5)
 
-    const batchVf = await verifyFixInstanceBatch([
-      { vulInfoID: b1, transferTime: buildTransferTime() },
-      { vulInfoID: b2, transferTime: buildTransferTime() }
-    ], `e2e-batch-vf-${runId}`)
+    const batchVf = await verifyFixInstanceBatch({
+      items: [
+        buildVerifyFixBatchItem(b1),
+        buildVerifyFixBatchItem(b2)
+      ]
+    }, `e2e-batch-vf-${runId}`)
     const success = (batchVf && batchVf.success) || []
     if (success.length < 2) {
       throw new Error('批量 verify-fix 成功数不足')
@@ -754,6 +835,24 @@ function resolveMinInstances (taskForm, includeInstanceFsm) {
   if (taskForm && taskForm.includeBatch !== false) min = Math.max(min, 3)
   if (taskForm && taskForm.includeFalsePositive) min = Math.max(min, 4)
   return min
+}
+
+export async function runBootstrapE2e (context) {
+  const results = []
+  const push = r => { results.push(r); return r }
+
+  let r = await runHealthStep()
+  push(r)
+  if (r.status === 'error') return results
+
+  const partnerFlow = await runPartnerTokenSteps(context, push)
+  if (!partnerFlow.ok) return results
+  const effectivePartnerId = partnerFlow.partnerId || context.partnerId
+
+  r = await runCreateTaskStep(context.taskForm, effectivePartnerId)
+  push(r)
+
+  return results
 }
 
 export async function runFullManualE2e (context) {
