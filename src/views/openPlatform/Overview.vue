@@ -133,6 +133,17 @@ const items = [
     ]
   },
   {
+    key: 'openTaskList',
+    phase: 'W1',
+    title: 'OPEN 编排任务',
+    routeName: 'OpenTaskList',
+    lines: [
+      '跨接入方 open_task 列表',
+      'scanTemplateId / autoVerify / 交叉扫描',
+      '进入任务实例工作台'
+    ]
+  },
+  {
     key: 'socOrch',
     phase: 'W1',
     title: 'SOC 编排监控',

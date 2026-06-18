@@ -76,6 +76,7 @@ export const OPEN_TASK_STATUSES = [
   { value: 'RUNNING', label: '运行中', color: 'blue' },
   { value: 'FINISHED', label: '已完成', color: 'green' },
   { value: 'FAILED', label: '失败', color: 'red' },
+  { value: 'DISPATCH_FAILED', label: '下发失败', color: 'orange' },
   { value: 'ACCEPTED', label: '已受理', color: 'default' }
 ]
 

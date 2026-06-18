@@ -84,6 +84,18 @@ export const asyncRouterMap = [
     meta: { title: 'SOC 编排监控' }
   },
   {
+    path: '/open-task/list',
+    name: 'OpenTaskList',
+    component: () => import('@/views/openPlatform/OpenTaskList'),
+    meta: { title: 'OPEN 编排任务', keepAlive: true }
+  },
+  {
+    path: '/open-task/workspace/:taskId',
+    name: 'OpenTaskWorkspace',
+    component: () => import('@/views/openPlatform/OpenTaskWorkspace'),
+    meta: { title: '任务实例工作台' }
+  },
+  {
     path: '/verify-fix-ops',
     name: 'VerifyFixOps',
     component: () => import('@/views/openPlatform/VerifyFixOps'),
