@@ -91,6 +91,10 @@
         <span slot="taskId" slot-scope="text">
           <code>{{ text }}</code>
         </span>
+        <span slot="caseId" slot-scope="text, record">
+          <a v-if="record.caseId" @click="goCase(record.caseId)"><code>{{ record.caseId }}</code></a>
+          <span v-else class="muted">-</span>
+        </span>
         <span slot="vulnType" slot-scope="text">
           <a-tag :color="vulnTypeColor(text)">{{ vulnTypeLabel(text) }}</a-tag>
         </span>
@@ -135,6 +139,7 @@ import { listOpenTasks, retryOpenTaskDispatch } from '@/api/openPlatform/openTas
 
 const columns = [
   { title: 'taskId', dataIndex: 'taskId', scopedSlots: { customRender: 'taskId' }, width: 140 },
+  { title: 'caseId', dataIndex: 'caseId', scopedSlots: { customRender: 'caseId' }, width: 140 },
   { title: 'extTaskId', dataIndex: 'extTaskId', width: 130, ellipsis: true },
   { title: 'partnerId', dataIndex: 'partnerId', width: 120, ellipsis: true },
   { title: '任务名称', dataIndex: 'taskName', ellipsis: true },
@@ -194,6 +199,10 @@ export default {
     },
     goWorkspace (record) {
       this.$router.push({ name: 'OpenTaskWorkspace', params: { taskId: record.taskId } })
+    },
+    goCase (caseId) {
+      if (!caseId) return
+      this.$router.push({ name: 'OperationCaseWorkspace', params: { caseId } })
     },
     canRetryDispatch (record) {
       return record && record.adapterMode === 'task-center'

@@ -80,6 +80,23 @@ export const OPEN_TASK_STATUSES = [
   { value: 'ACCEPTED', label: '已受理', color: 'default' }
 ]
 
+export const OPERATION_CASE_TYPES = [
+  { value: 'TASK_SCAN', label: '扫描任务', color: 'blue' },
+  { value: 'INSTANCE_VERIFY', label: '实例验证', color: 'cyan' },
+  { value: 'INSTANCE_REMEDIATE', label: '实例处置', color: 'cyan' },
+  { value: 'VERIFY_FIX', label: '修复核验', color: 'purple' },
+  { value: 'INSTANCE_BATCH', label: '批量实例', color: 'gold' }
+]
+
+export const OPERATION_CASE_STATUSES = [
+  { value: 'ACCEPTED', label: '已受理', color: 'default' },
+  { value: 'RUNNING', label: '进行中', color: 'blue' },
+  { value: 'FINISHED', label: '已完成', color: 'green' },
+  { value: 'FAILED', label: '失败', color: 'red' },
+  { value: 'PARTIAL_FAILED', label: '部分失败', color: 'orange' },
+  { value: 'CANCELLED', label: '已取消', color: 'orange' }
+]
+
 export const MOCK_INGEST_MODES = [
   { value: 'auto', label: '自动完成', color: 'default' },
   { value: 'manual', label: '半人工', color: 'orange' }
@@ -104,6 +121,8 @@ const REGISTRY = {
   webhookDeliveryStatus: buildMap(WEBHOOK_DELIVERY_STATUSES),
   webhookEventType: buildMap(WEBHOOK_EVENT_TYPES),
   openTaskStatus: buildMap(OPEN_TASK_STATUSES),
+  operationCaseType: buildMap(OPERATION_CASE_TYPES),
+  operationCaseStatus: buildMap(OPERATION_CASE_STATUSES),
   mockIngestMode: buildMap(MOCK_INGEST_MODES),
   httpMethod: buildMap(HTTP_METHODS)
 }
@@ -119,6 +138,8 @@ const OPTIONS_REGISTRY = {
   webhookDeliveryStatus: WEBHOOK_DELIVERY_STATUSES,
   webhookEventType: WEBHOOK_EVENT_TYPES,
   openTaskStatus: OPEN_TASK_STATUSES,
+  operationCaseType: OPERATION_CASE_TYPES,
+  operationCaseStatus: OPERATION_CASE_STATUSES,
   mockIngestMode: MOCK_INGEST_MODES,
   httpMethod: HTTP_METHODS
 }

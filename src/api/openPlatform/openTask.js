@@ -50,3 +50,11 @@ export function getOpenTaskSurveyResults (taskId, params = {}) {
   })
   return openApiRequest.get(`${PREFIX}/${encodeURIComponent(taskId)}/survey-results`, { params: query })
 }
+
+export function refetchOpenTaskSurveyResults (taskId, subId) {
+  return openApiRequest.post(
+    `${PREFIX}/${encodeURIComponent(taskId)}/survey-refetch`,
+    null,
+    { params: { subId }, silent: true }
+  )
+}

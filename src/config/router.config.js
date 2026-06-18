@@ -96,6 +96,18 @@ export const asyncRouterMap = [
     meta: { title: '任务实例工作台' }
   },
   {
+    path: '/operation-cases',
+    name: 'OperationCaseList',
+    component: () => import('@/views/openPlatform/OperationCaseList'),
+    meta: { title: '运营案件', keepAlive: true }
+  },
+  {
+    path: '/operation-cases/:caseId',
+    name: 'OperationCaseWorkspace',
+    component: () => import('@/views/openPlatform/OperationCaseWorkspace'),
+    meta: { title: '运营案件工作台' }
+  },
+  {
     path: '/verify-fix-ops',
     name: 'VerifyFixOps',
     component: () => import('@/views/openPlatform/VerifyFixOps'),

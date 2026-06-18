@@ -140,7 +140,18 @@ const items = [
     lines: [
       '跨接入方 open_task 列表',
       'scanTemplateId / autoVerify / 交叉扫描',
-      '进入任务实例工作台'
+      '进入任务实例工作台（可与运营案件互跳）'
+    ]
+  },
+  {
+    key: 'operationCases',
+    phase: 'W3',
+    title: '运营案件',
+    routeName: 'OperationCaseList',
+    lines: [
+      'Partner 写操作统一 case_id',
+      'TASK_SCAN / 实例 / 修复核验',
+      '统一工作台：时间线、API、Webhook、跃迁'
     ]
   },
   {

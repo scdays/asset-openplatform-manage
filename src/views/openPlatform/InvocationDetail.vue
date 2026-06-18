@@ -43,6 +43,10 @@
             <div class="kv-row"><span class="k">耗时</span><span class="v">{{ formatDuration(detail.latencyMs) }}</span></div>
             <div class="kv-row"><span class="k">resourceType</span><span class="v">{{ detail.resourceType || '-' }}</span></div>
             <div class="kv-row"><span class="k">resourceId</span><span class="v"><code>{{ detail.resourceId || '-' }}</code></span></div>
+            <div v-if="detail.caseId" class="kv-row">
+              <span class="k">运营案件</span>
+              <span class="v"><a @click="goOperationCase(detail.caseId)"><code>{{ detail.caseId }}</code></a></span>
+            </div>
             <div class="kv-row"><span class="k">clientIp</span><span class="v">{{ detail.clientIp || '-' }}</span></div>
           </a-card>
           <a-card title="关联资源" :bordered="false" class="detail-card">
@@ -178,6 +182,10 @@ export default {
       }).catch(err => { this.$message.error((err && err.message) || '下载响应报文失败') })
     },
     goPartner (partnerId) { this.$router.push({ name: 'PartnerDetail', params: { partnerId } }) },
+    goOperationCase (caseId) {
+      if (!caseId) return
+      this.$router.push({ name: 'OperationCaseWorkspace', params: { caseId } })
+    },
     goWebhookDetail (webhook) {
       if (!webhook || webhook.id == null) return
       this.$router.push({ name: 'WebhookDeliveryList', query: { partnerId: this.detail.partnerId, resourceId: webhook.resourceId || this.detail.resourceId, deliveryId: String(webhook.id) } })

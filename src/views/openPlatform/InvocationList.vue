@@ -90,6 +90,10 @@
           <code v-if="text">{{ text }}</code>
           <span v-else>-</span>
         </span>
+        <span slot="caseId" slot-scope="text, record">
+          <a v-if="record.caseId" @click="goCase(record.caseId)"><code>{{ record.caseId }}</code></a>
+          <span v-else>-</span>
+        </span>
         <span slot="responseCode" slot-scope="text">
           <response-code-tag :value="text" />
         </span>
@@ -126,6 +130,7 @@ const columns = [
   { title: '业务域', dataIndex: 'domain', scopedSlots: { customRender: 'domain' }, width: 100 },
   { title: 'operationId', dataIndex: 'operationId', width: 140 },
   { title: 'resourceId', dataIndex: 'resourceId', scopedSlots: { customRender: 'resourceId' }, width: 140 },
+  { title: 'caseId', dataIndex: 'caseId', scopedSlots: { customRender: 'caseId' }, width: 140 },
   { title: '响应码', dataIndex: 'responseCode', scopedSlots: { customRender: 'responseCode' }, width: 140 },
   { title: '耗时', dataIndex: 'latencyMs', scopedSlots: { customRender: 'latencyMs' }, width: 80 },
   { title: '开始时间', dataIndex: 'startedAt', scopedSlots: { customRender: 'startedAt' }, width: 170 },
@@ -257,6 +262,10 @@ export default {
     goDetail (record) {
       if (!record || !record.invocationId) return
       this.$router.push({ name: 'InvocationDetail', params: { invocationId: record.invocationId } })
+    },
+    goCase (caseId) {
+      if (!caseId) return
+      this.$router.push({ name: 'OperationCaseWorkspace', params: { caseId } })
     },
     openPreview (record) {
       if (!record || !record.invocationId) return
