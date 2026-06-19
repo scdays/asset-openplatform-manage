@@ -178,11 +178,11 @@ export async function runPartnerStep (partnerId) {
     const cred = await createE2eCredential(partnerId)
     return stepResult('partner', '创建 Partner 与凭证', 'success',
       `partnerId=${partnerId}，凭证见页面「OAuth 凭证」卡片`, {
-      partnerId,
-      clientId: cred.clientId,
-      clientSecret: cred.clientSecret,
-      source: 'create'
-    })
+        partnerId,
+        clientId: cred.clientId,
+        clientSecret: cred.clientSecret,
+        source: 'create'
+      })
   } catch (e) {
     return stepResult('partner', '创建 Partner 与凭证', 'error', e.message || '创建失败')
   }
@@ -859,8 +859,8 @@ export async function runFullManualE2e (context) {
   const results = []
   const push = r => { results.push(r); return r }
 
-  const minInstances = context.minInstances
-    || resolveMinInstances(context.taskForm, context.includeInstanceFsm)
+  const minInstances = context.minInstances ||
+    resolveMinInstances(context.taskForm, context.includeInstanceFsm)
 
   let r = await runHealthStep()
   push(r)

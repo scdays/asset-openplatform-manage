@@ -20,6 +20,7 @@ export function listVerifyFixJobs (params = {}) {
       partnerId: params.partnerId,
       status: params.status,
       taskId: params.taskId,
+      jobId: params.jobId,
       limit: params.limit || 50
     })
   })

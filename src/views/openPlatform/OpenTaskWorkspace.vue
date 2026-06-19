@@ -597,9 +597,11 @@ export default {
       if (!taskId) return
       const activeTab = typeof tabKey === 'string' ? tabKey : this.activeTab
       const prevSurveySubId = this.surveySubId
+      const seq = (this._refreshSeq = (this._refreshSeq || 0) + 1)
       this.refreshing = true
       getOpenTaskWorkspace(taskId)
         .then(data => {
+          if (seq !== this._refreshSeq) return
           this.workspace = data
           const subs = (data && data.surveySubs) || []
           if (prevSurveySubId && subs.some(s => s.subId === prevSurveySubId)) {
@@ -613,19 +615,13 @@ export default {
           }
         })
         .catch(err => {
+          if (seq !== this._refreshSeq) return
           this.$message.error((err && err.message) || '刷新工作台失败')
         })
         .finally(() => {
+          if (seq !== this._refreshSeq) return
           this.refreshing = false
         })
-    },
-    goVulnDisposal () {
-      const task = this.workspace && this.workspace.task
-      if (!task) return
-      this.$router.push({
-        name: 'VerifyFixOps',
-        query: { partnerId: task.partnerId, taskId: task.taskId }
-      })
     },
     loadWorkspace (taskId) {
       this.loading = true

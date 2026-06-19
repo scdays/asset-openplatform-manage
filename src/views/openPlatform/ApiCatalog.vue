@@ -174,7 +174,7 @@ export default {
         keyword: undefined
       }
       this.$refs.table.refresh(true)
-    },
+    }
   }
 }
 </script>
@@ -271,4 +271,3 @@ export default {
   }
 }
 </style>
-

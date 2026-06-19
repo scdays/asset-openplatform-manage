@@ -5,8 +5,8 @@ import { getOpenPartnerGatewayURLFromConf } from '@/utils/openPlatformRuntime'
  * 与浏览器 openPartnerRequest 分离：展示可用 host:35770，实际 E2E 请求走同源反代。
  */
 export function getPartnerPublicBaseUrl () {
-  const configured = getOpenPartnerGatewayURLFromConf()
-    || (typeof process !== 'undefined' && process.env && process.env.VUE_APP_OPEN_PARTNER_PUBLIC_BASE_URL)
+  const configured = getOpenPartnerGatewayURLFromConf() ||
+    (typeof process !== 'undefined' && process.env && process.env.VUE_APP_OPEN_PARTNER_PUBLIC_BASE_URL)
   if (configured) {
     return String(configured).trim().replace(/\/$/, '')
   }

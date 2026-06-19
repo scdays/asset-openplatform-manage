@@ -141,22 +141,18 @@ export default {
     async loadData () {
       this.loading = true
       try {
-        let data = await listVerifyFixJobs({
+        const data = await listVerifyFixJobs({
           partnerId: this.queryParam.partnerId,
           status: this.queryParam.status,
           taskId: this.queryParam.taskId,
+          jobId: this.queryParam.jobId,
           limit: 100
         })
-        data = Array.isArray(data) ? data : []
-        const jobFilter = (this.queryParam.jobId || '').trim()
-        if (jobFilter) {
-          data = data.filter(row => row.jobId && row.jobId.indexOf(jobFilter) >= 0)
-        }
-        this.rows = data
-        this.pagination = { ...this.pagination, total: data.length }
+        this.rows = Array.isArray(data) ? data : []
+        this.pagination = { ...this.pagination, total: this.rows.length }
       } catch (e) {
         this.rows = []
-        this.$message.error(e.message || '加载失败')
+        this.$message.error((e && e.message) || '加载失败')
       } finally {
         this.loading = false
       }

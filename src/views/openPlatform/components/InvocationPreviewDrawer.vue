@@ -97,8 +97,7 @@ export default {
   },
   watch: {
     visible (val) {
-      if (val) { this.activeTab = 'summary'; this.loadDetail() }
-      else { this.detail = null; this.requestBodyVisible = false; this.responseBodyVisible = false }
+      if (val) { this.activeTab = 'summary'; this.loadDetail() } else { this.detail = null; this.requestBodyVisible = false; this.responseBodyVisible = false }
     },
     invocationId () { if (this.visible) this.loadDetail() }
   },

@@ -205,8 +205,8 @@ export default {
       this.$router.push({ name: 'OperationCaseWorkspace', params: { caseId } })
     },
     canRetryDispatch (record) {
-      return record && record.adapterMode === 'task-center'
-        && (record.status === 'DISPATCH_FAILED' || record.status === 'ACCEPTED')
+      return record && record.adapterMode === 'task-center' &&
+        (record.status === 'DISPATCH_FAILED' || record.status === 'ACCEPTED')
     },
     retryDispatch (record) {
       if (!record || !record.taskId) return

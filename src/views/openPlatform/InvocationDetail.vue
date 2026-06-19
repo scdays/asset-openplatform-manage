@@ -203,8 +203,7 @@ export default {
       const ta = document.createElement('textarea')
       ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px'
       document.body.appendChild(ta); ta.select()
-      try { document.execCommand('copy'); this.$message.success(label + ' 已复制') }
-      catch (e) { this.$message.error('复制失败，请手动选择复制') }
+      try { document.execCommand('copy'); this.$message.success(label + ' 已复制') } catch (e) { this.$message.error('复制失败，请手动选择复制') }
       document.body.removeChild(ta)
     },
     formatDuration (latencyMs) { if (latencyMs === undefined || latencyMs === null || latencyMs === '') return '-'; return latencyMs + ' ms' },

@@ -208,6 +208,7 @@ export default {
       } catch (e) {
         this.dispatch = null
         this.bundleStatus = null
+        this.$message.error((e && e.message) || '任务数据加载失败')
       } finally {
         this.loading = false
       }
@@ -219,6 +220,8 @@ export default {
       try {
         this.previewResult = await previewMockReport(ctx.taskId, ctx.file, 10)
         this.$message.success('预览完成')
+      } catch (e) {
+        this.$message.error((e && e.message) || '预览失败')
       } finally {
         this.previewing = false
       }
@@ -238,6 +241,8 @@ export default {
         this.clearFile()
         await this.loadTask()
         this.$emit('imported', result)
+      } catch (e) {
+        this.$message.error((e && e.message) || '导入失败')
       } finally {
         this.importing = false
       }

@@ -190,6 +190,9 @@ export default {
           this.$message.success(`${title}：${content}`)
           if (!dryRun) this.$refs.table.refresh(true)
         })
+        .catch(err => {
+          this.$message.error((err && err.message) || '历史回填失败')
+        })
         .finally(() => { this.backfillLoading = false })
     },
     formatDateTime (value) {

@@ -74,7 +74,9 @@ export function downloadPartnerExport (exportId) {
 function toAsciiHeaderValue (value) {
   if (value == null || value === '') return value
   const s = String(value)
+  // eslint-disable-next-line no-control-regex
   if (!/[^\x00-\xFF]/.test(s)) return s
+  // eslint-disable-next-line no-control-regex
   const ascii = s.replace(/[^\x00-\xFF]/g, '')
   return ascii || `e2e-${Date.now()}`
 }

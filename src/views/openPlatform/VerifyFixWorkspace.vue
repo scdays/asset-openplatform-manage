@@ -446,10 +446,13 @@ export default {
           this.resetWorkspaceState()
           this.jobId = nextId
         }
-        this.loadHealth()
         this.loadWorkspace()
       }
     }
+  },
+  created () {
+    // adapterMode 为全局引擎配置，仅拉取一次即可，避免每次切换 jobId 与 loadWorkspace 并发导致 Mock 面板闪现
+    this.loadHealth()
   },
   methods: {
     scannerLabel: scannerTypeLabel,
@@ -591,11 +594,19 @@ export default {
       try {
         await fn(this.jobId)
         this.$message.success(okMsg)
+        this.clearXmlFile()
         await this.loadWorkspace()
       } catch (e) {
         this.$message.error(e.message || '操作失败')
       } finally {
         this.completing = false
+      }
+    },
+    clearXmlFile () {
+      this.xmlFile = null
+      this.xmlFileName = ''
+      if (this.$refs.fileInput) {
+        this.$refs.fileInput.value = ''
       }
     },
     importAndComplete () {

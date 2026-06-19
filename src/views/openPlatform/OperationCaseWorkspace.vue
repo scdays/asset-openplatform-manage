@@ -288,6 +288,10 @@ export default {
           const tab = this.$route.query.tab
           if (tab) this.activeTab = tab
         })
+        .catch(err => {
+          this.workspace = null
+          this.$message.error((err && err.message) || '案件工作台加载失败')
+        })
         .finally(() => { this.loading = false })
     },
     goOpenTaskWorkspace () {
@@ -318,6 +322,9 @@ export default {
           } else {
             this.$message.warning(d.message || '重试未成功')
           }
+        })
+        .catch(err => {
+          this.$message.error((err && err.message) || '重试提交失败')
         })
         .finally(() => { this.retryLoading = false })
     },

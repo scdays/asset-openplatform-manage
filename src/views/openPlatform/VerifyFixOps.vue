@@ -175,16 +175,16 @@ export default {
       return this.instances.filter(r => set.has(r.vulInfoId))
     },
     canSubmitVerify () {
-      return this.selectedRows.length > 0
-        && this.selectedRows.every(r => r.vulInfoStat === 0 || r.vulInfoStat === 1)
+      return this.selectedRows.length > 0 &&
+        this.selectedRows.every(r => r.vulInfoStat === 0 || r.vulInfoStat === 1)
     },
     canSubmitRemediate () {
-      return this.selectedRows.length > 0
-        && this.selectedRows.every(r => [1, 2, 7].includes(r.vulInfoStat))
+      return this.selectedRows.length > 0 &&
+        this.selectedRows.every(r => [1, 2, 7].includes(r.vulInfoStat))
     },
     canSubmitVerifyFix () {
-      return this.selectedRows.length > 0
-        && this.selectedRows.every(r => r.vulInfoStat === 5)
+      return this.selectedRows.length > 0 &&
+        this.selectedRows.every(r => r.vulInfoStat === 5)
     },
     vulInfoStatOptions () {
       return [1, 2, 3, 5, 6, 7].map(v => ({
@@ -224,7 +224,7 @@ export default {
     instanceRowSelection () {
       return {
         selectedRowKeys: this.selectedVulInfoIds,
-        onChange: keys => { this.selectedVulInfoIds = keys }
+        onChange: this.onInstanceSelectionChange
       }
     }
   },
@@ -238,6 +238,9 @@ export default {
     }
   },
   methods: {
+    onInstanceSelectionChange (keys) {
+      this.selectedVulInfoIds = keys
+    },
     goVerifyFixJobs () {
       const query = {}
       if (this.sessionPartnerId) query.partnerId = this.sessionPartnerId

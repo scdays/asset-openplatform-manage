@@ -123,12 +123,12 @@ export default {
   },
   created () {
     const { pageNo } = this.$route.params
-    const localPageNum = this.pageURI && (pageNo && parseInt(pageNo)) || this.pageNum
-    this.localPagination = ['auto', true].includes(this.showPagination) && Object.assign({}, this.localPagination, {
+    const localPageNum = (this.pageURI && (pageNo && parseInt(pageNo))) || this.pageNum
+    this.localPagination = (['auto', true].includes(this.showPagination) && Object.assign({}, this.localPagination, {
       current: localPageNum,
       pageSize: this.pageSize,
       showSizeChanger: this.showSizeChanger
-    }) || false
+    })) || false
     this.needTotalList = this.initTotalList(this.columns)
     this.loadData()
     this.initColumn()
@@ -205,9 +205,9 @@ export default {
       this.localLoading = true
       const parameter = Object.assign({
         pageNo: (pagination && pagination.current) ||
-          this.showPagination && this.localPagination.current || this.pageNum,
+          (this.showPagination && this.localPagination.current) || this.pageNum,
         pageSize: (pagination && pagination.pageSize) ||
-          this.showPagination && this.localPagination.pageSize || this.pageSize
+          (this.showPagination && this.localPagination.pageSize) || this.pageSize
       },
       (sorter && sorter.field && {
         sortField: sorter.field
@@ -223,13 +223,13 @@ export default {
       // eslint-disable-next-line
       if ((typeof result === 'object' || typeof result === 'function') && typeof result.then === 'function') {
         result.then(r => {
-          this.localPagination = this.showPagination && Object.assign({}, this.localPagination, {
+          this.localPagination = (this.showPagination && Object.assign({}, this.localPagination, {
             current: r.pageNo, // 返回结果中的当前分页数
             total: r.totalCount, // 返回结果中的总记录数
             showSizeChanger: this.showSizeChanger,
             pageSize: (pagination && pagination.pageSize) ||
               this.localPagination.pageSize
-          }) || false
+          })) || false
           // 为防止删除数据后导致页面当前页面数据长度为 0 ,自动翻页到上一页
           if (r.data.length === 0 && this.showPagination && this.localPagination.current > 1) {
             this.localPagination.current--
@@ -371,7 +371,7 @@ export default {
   render () {
     const props = {}
     const localKeys = Object.keys(this.$data)
-    const showAlert = (typeof this.alert === 'object' && this.alert !== null && this.alert.show) && typeof this.rowSelection.selectedRowKeys !== 'undefined' || this.alert
+    const showAlert = ((typeof this.alert === 'object' && this.alert !== null && this.alert.show) && typeof this.rowSelection.selectedRowKeys !== 'undefined') || this.alert
 
     Object.keys(T.props).forEach(k => {
       const localKey = `local${k.substring(0, 1).toUpperCase()}${k.substring(1)}`

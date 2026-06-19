@@ -547,8 +547,14 @@ export default {
       this.results = []
       this.selectedPartnerId = ''
       this.session = {
-        partnerId: '', clientId: '', clientSecret: '', accessToken: '', taskId: '', vulInfoIds: [],
-        expiresIn: null, tokenSource: ''
+        partnerId: '',
+        clientId: '',
+        clientSecret: '',
+        accessToken: '',
+        taskId: '',
+        vulInfoIds: [],
+        expiresIn: null,
+        tokenSource: ''
       }
       this.tokenRecords = []
       this.credentialBundle = null

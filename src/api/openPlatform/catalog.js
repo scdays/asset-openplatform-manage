@@ -27,8 +27,8 @@ function normalizeListData (raw, defaultPage, defaultSize) {
     totalRaw !== undefined
       ? totalRaw
       : (totalCountRaw !== undefined
-          ? totalCountRaw
-          : (countRaw !== undefined ? countRaw : (Array.isArray(list) ? list.length : 0)))
+        ? totalCountRaw
+        : (countRaw !== undefined ? countRaw : (Array.isArray(list) ? list.length : 0)))
   )
   return {
     items: Array.isArray(list) ? list : [],
@@ -159,4 +159,3 @@ export function listDeveloperDocs () {
     return []
   }).catch(() => [])
 }
-
