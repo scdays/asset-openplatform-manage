@@ -121,13 +121,33 @@
                 </a-button>
                 <span class="api-hint">POST /internal/admin/open-tasks/{taskId}/retry-dispatch</span>
               </div>
+              <!-- 暂时隐藏「重新获取全部报告」入口，保留单子任务行内的「重新获取报告」操作 -->
+              <!-- <div v-if="canRefetchReport" class="survey-retry-toolbar">
+                <a-alert
+                  type="warning"
+                  show-icon
+                  message="存在子任务原始扫描报告归档失败或待归档，可手动重新从 SFTP 下载并归档至文件服务。"
+                  style="margin-bottom: 12px;"
+                />
+                <a-button
+                  type="primary"
+                  :loading="reportAllLoading"
+                  @click="refetchAllReports()"
+                >
+                  重新获取全部报告
+                </a-button>
+                <span class="api-hint">POST /internal/admin/open-tasks/{taskId}/report-refetch-all</span>
+              </div> -->
               <sub-task-table
                 :rows="workspace.surveySubs"
                 :show-retry="canRetrySurvey"
                 :show-refetch="canRefetchSurvey"
+                :show-report="canRefetchReport"
                 :refetch-loading-sub-id="refetchLoadingSubId"
+                :report-loading-sub-id="reportLoadingSubId"
                 @retry-sub="retrySurveyDispatch"
                 @refetch-sub="refetchSurveyResults"
+                @refetch-report="refetchSubReport"
               />
             </a-tab-pane>
 
@@ -300,7 +320,7 @@
 
 <script>
 import EnumTag from '@/components/openPlatform/EnumTag'
-import { getOpenTaskWorkspace, getOpenTaskSurveyResults, retryOpenTaskDispatch, refetchOpenTaskSurveyResults } from '@/api/openPlatform/openTask'
+import { getOpenTaskWorkspace, getOpenTaskSurveyResults, retryOpenTaskDispatch, refetchOpenTaskSurveyResults, refetchOpenTaskSubReport } from '@/api/openPlatform/openTask'
 
 const SubTaskTable = {
   name: 'SubTaskTable',
@@ -309,7 +329,9 @@ const SubTaskTable = {
     dualScan: { type: Boolean, default: false },
     showRetry: { type: Boolean, default: false },
     showRefetch: { type: Boolean, default: false },
-    refetchLoadingSubId: { type: String, default: '' }
+    showReport: { type: Boolean, default: false },
+    refetchLoadingSubId: { type: String, default: '' },
+    reportLoadingSubId: { type: String, default: '' }
   },
   methods: {
     canRetrySub (row) {
@@ -317,6 +339,19 @@ const SubTaskTable = {
     },
     canRefetchSub (row) {
       return row && row.surveyId && row.status === 'FINISHED'
+    },
+    // 可重新获取报告：子任务已完成且有报告路径（已收到 download_report），不论当前归档状态
+    canRefetchReport (row) {
+      return row && !!row.reportDownloadPath && row.status === 'FINISHED'
+    },
+    reportStatusTag (status) {
+      const map = {
+        ARCHIVED: { color: 'green', text: '已归档' },
+        FAILED: { color: 'red', text: '归档失败' },
+        PENDING: { color: 'blue', text: '待归档' },
+        WAITING_PATH: { color: 'orange', text: '等待报告路径' }
+      }
+      return map[status] || { color: 'default', text: status || '-' }
     }
   },
   render (h) {
@@ -332,17 +367,42 @@ const SubTaskTable = {
       { title: '进度', dataIndex: 'progress', width: 70 },
       { title: '错误', dataIndex: 'errorMessage', ellipsis: true }
     ]
-    if (this.showRetry || this.showRefetch) {
+    if (this.showReport) {
+      cols.push({
+        title: '报告同步',
+        key: 'reportArchiveStatus',
+        width: 120,
+        customRender: (text, row) => {
+          const tag = self.reportStatusTag(row.reportArchiveStatus)
+          const nodes = [h('a-tag', { props: { color: tag.color } }, tag.text)]
+          if (row.reportArchiveStatus === 'FAILED' && row.reportArchiveError) {
+            nodes.push(h('a-tooltip', { props: { title: row.reportArchiveError } }, [
+              h('a-icon', { props: { type: 'info-circle' }, style: { color: 'rgba(0,0,0,.45)', marginLeft: '4px' } })
+            ]))
+          }
+          return h('span', nodes)
+        }
+      })
+      cols.push({
+        title: '报告路径',
+        dataIndex: 'reportDownloadPath',
+        ellipsis: true,
+        customRender: t => t
+          ? h('a-tooltip', { props: { title: t } }, [h('code', t)])
+          : h('span', { class: 'muted' }, '-')
+      })
+    }
+    if (this.showRetry || this.showRefetch || this.showReport) {
       cols.push({
         title: '操作',
         key: 'action',
-        width: 140,
+        width: 240,
         customRender: (text, row) => {
           const actions = []
           if (self.showRetry && self.canRetrySub(row)) {
             actions.push(h('a', {
               on: { click: () => self.$emit('retry-sub', row.subId) }
-            }, '重试'))
+            }, '重试下发'))
           }
           if (self.showRefetch && self.canRefetchSub(row)) {
             if (actions.length) {
@@ -352,7 +412,17 @@ const SubTaskTable = {
             actions.push(h('a', {
               attrs: { disabled: loading ? 'disabled' : null },
               on: { click: () => !loading && self.$emit('refetch-sub', row.subId) }
-            }, loading ? '获取中…' : '重新获取'))
+            }, loading ? '获取中…' : '重取结果'))
+          }
+          if (self.showReport && self.canRefetchReport(row)) {
+            if (actions.length) {
+              actions.push(h('span', { class: 'muted', style: { margin: '0 6px' } }, '|'))
+            }
+            const loading = self.reportLoadingSubId === row.subId
+            actions.push(h('a', {
+              attrs: { disabled: loading ? 'disabled' : null },
+              on: { click: () => !loading && self.$emit('refetch-report', row.subId) }
+            }, loading ? '归档中…' : '重新获取报告'))
           }
           if (!actions.length) {
             return h('span', { class: 'muted' }, '-')
@@ -487,7 +557,8 @@ export default {
       surveyResults: null,
       surveySubId: undefined,
       retryLoading: false,
-      refetchLoadingSubId: ''
+      refetchLoadingSubId: '',
+      reportLoadingSubId: ''
     }
   },
   computed: {
@@ -501,6 +572,12 @@ export default {
     canRefetchSurvey () {
       const task = this.workspace && this.workspace.task
       return task && task.adapterMode === 'task-center' && (task.taskPhase == null || task.taskPhase <= 1)
+    },
+    canRefetchReport () {
+      const task = this.workspace && this.workspace.task
+      if (!task || task.adapterMode !== 'task-center') return false
+      const subs = (this.workspace && this.workspace.surveySubs) || []
+      return subs.some(s => s.reportDownloadPath && s.status === 'FINISHED')
     },
     hasSurveyResultTabs () {
       const src = this.surveyResults && this.surveyResults.source
@@ -689,6 +766,21 @@ export default {
           this.$message.error((err && err.message) || '重新获取失败')
         })
         .finally(() => { this.refetchLoadingSubId = '' })
+    },
+    refetchSubReport (subId) {
+      const taskId = this.$route.params.taskId
+      if (!taskId || !subId) return
+      this.reportLoadingSubId = subId
+      refetchOpenTaskSubReport(taskId, subId)
+        .then(data => {
+          const ok = data && data.success
+          this.$message[ok ? 'success' : 'warning']((data && data.message) || '重新获取报告完成')
+          this.refreshWorkspaceData('survey')
+        })
+        .catch(err => {
+          this.$message.error((err && err.message) || '重新获取报告失败')
+        })
+        .finally(() => { this.reportLoadingSubId = '' })
     },
     vulnRowKey (row, index) {
       return row.id || `${row.ip || ''}-${row.port || ''}-${row.vulId || ''}-${index}`

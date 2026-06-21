@@ -23,9 +23,15 @@
                 · partner <code>{{ workspace.job.partnerId }}</code>
                 · 条数 {{ workspace.job.itemCount || 0 }}
                 · 复扫 sub {{ (workspace.rescanSubs || []).length }}
+                <template v-if="workspace.job.retryCount > 0">
+                  · 自动重试 <span :class="{ 'retry-warn': workspace.job.retryCount >= 5 }">{{ workspace.job.retryCount }}/5</span>
+                </template>
                 <template v-if="workspace.job.caseId">
                   · case <a @click="goCase(workspace.job.caseId)"><code>{{ workspace.job.caseId }}</code></a>
                 </template>
+              </div>
+              <div v-if="workspace.job.status === 'DISPATCH_FAILED'" class="retry-hint">
+                <a-alert type="warning" show-icon :message="retryHintMessage" banner />
               </div>
             </div>
             <div class="workspace-header-actions">
@@ -82,6 +88,22 @@
             </a-tab-pane>
 
             <a-tab-pane key="subs" tab="复扫子任务">
+              <div v-if="canRetryRescan" class="survey-retry-toolbar">
+                <a-alert
+                  type="warning"
+                  show-icon
+                  message="存在复扫子任务下发失败，可手动重试向 vuln-task-center 下发 SOC 扫描。"
+                  style="margin-bottom: 12px;"
+                />
+                <a-button
+                  type="primary"
+                  :loading="retrying"
+                  @click="retryDispatch()"
+                >
+                  重试全部复扫下发
+                </a-button>
+                <span class="api-hint">POST /internal/admin/verify-fix/jobs/{jobId}/retry-dispatch</span>
+              </div>
               <a-table
                 size="small"
                 row-key="subId"
@@ -93,6 +115,15 @@
                   {{ record.scannerLabel || scannerLabel(text) }}
                 </span>
                 <span slot="scanPhase" slot-scope="text">{{ text === 3 ? '修复核验(3)' : text }}</span>
+                <span slot="subStatus" slot-scope="text">
+                  <a-tag :color="subStatusColor(text)">{{ text || '-' }}</a-tag>
+                </span>
+                <span slot="subError" slot-scope="text">
+                  <a-tooltip v-if="text" :title="text">
+                    <span class="sub-error-text">{{ text }}</span>
+                  </a-tooltip>
+                  <span v-else class="muted">-</span>
+                </span>
                 <span slot="reportPath" slot-scope="text">
                   <code v-if="text" class="path-code">{{ text }}</code>
                   <span v-else class="muted">-</span>
@@ -102,7 +133,13 @@
                     v-if="canRefetchSub(record)"
                     :disabled="refetchLoadingSubId === record.subId"
                     @click="refetchRescanSub(record.subId)"
-                  >{{ refetchLoadingSubId === record.subId ? '获取中…' : '重新获取' }}</a>
+                  >{{ refetchLoadingSubId === record.subId ? '获取中…' : '重取结果' }}</a>
+                  <a-tooltip v-else-if="canRetrySub(record)" title="仅重新下发该子任务">
+                    <a
+                      :disabled="retryingSubId === record.subId"
+                      @click="retryDispatchSub(record.subId)"
+                    >{{ retryingSubId === record.subId ? '重试中…' : '重试下发' }}</a>
+                  </a-tooltip>
                   <span v-else class="muted">-</span>
                 </span>
               </a-table>
@@ -284,7 +321,13 @@
 
 <script>
 import EnumTag from '@/components/openPlatform/EnumTag'
-import { getVerifyFixWorkspace, refetchVerifyFixRescanResults, scannerTypeLabel } from '@/api/openPlatform/verifyFix'
+import {
+  getVerifyFixWorkspace,
+  refetchVerifyFixRescanResults,
+  retryVerifyFixDispatch,
+  retryVerifyFixDispatchSub,
+  scannerTypeLabel
+} from '@/api/openPlatform/verifyFix'
 import { getOpenTaskSurveyResults } from '@/api/openPlatform/openTask'
 import {
   importVerifyFixRescanXml,
@@ -297,11 +340,12 @@ const subColumns = [
   { title: 'subId', dataIndex: 'subId', ellipsis: true },
   { title: '扫描器', dataIndex: 'scannerType', scopedSlots: { customRender: 'scannerType' }, width: 110 },
   { title: '阶段', dataIndex: 'scanPhase', scopedSlots: { customRender: 'scanPhase' }, width: 100 },
-  { title: '状态', dataIndex: 'status', width: 88 },
+  { title: '状态', dataIndex: 'status', scopedSlots: { customRender: 'subStatus' }, width: 88 },
   { title: '进度', dataIndex: 'progress', width: 64 },
+  { title: '失败原因', dataIndex: 'errorMessage', ellipsis: true, scopedSlots: { customRender: 'subError' }, width: 200 },
   { title: 'surveyId', dataIndex: 'surveyId', ellipsis: true },
   { title: '报告路径', dataIndex: 'reportDownloadPath', scopedSlots: { customRender: 'reportPath' } },
-  { title: '操作', scopedSlots: { customRender: 'subAction' }, width: 100, fixed: 'right' }
+  { title: '操作', scopedSlots: { customRender: 'subAction' }, width: 150, fixed: 'right' }
 ]
 
 const itemColumns = [
@@ -382,9 +426,11 @@ export default {
       surveyResults: null,
       surveyLoading: false,
       refetchLoadingSubId: '',
+      retryingSubId: '',
       xmlFile: null,
       xmlFileName: '',
-      completing: false
+      completing: false,
+      retrying: false
     }
   },
   computed: {
@@ -393,6 +439,20 @@ export default {
     },
     canRefetchRescan () {
       return this.adapterMode === 'task-center'
+    },
+    canRetryRescan () {
+      if (!this.canRefetchRescan) return false
+      const job = this.workspace && this.workspace.job
+      if (job && job.status === 'DISPATCH_FAILED') return true
+      const subs = (this.workspace && this.workspace.rescanSubs) || []
+      return subs.some(s => s.status === 'FAILED')
+    },
+    retryHintMessage () {
+      const c = (this.workspace && this.workspace.job && this.workspace.job.retryCount) || 0
+      if (c >= 5) {
+        return `已达自动重试上限（${c}/5），自动重试已停止，请点击「重试下发」手动介入（手动重试不受上限约束）`
+      }
+      return '下发失败，可点击「重试下发」手动重新下发复扫子任务'
     },
     hasSurveyResultTabs () {
       const src = this.surveyResults && this.surveyResults.source
@@ -471,6 +531,17 @@ export default {
     canRefetchSub (row) {
       return this.canRefetchRescan && row && row.surveyId && row.status === 'FINISHED'
     },
+    canRetrySub (row) {
+      // 复扫子任务调用 vuln-task-center 失败（sub.status=FAILED）时允许手动重试下发。
+      // 该场景下 job 整体仍为 RUNNING，job 级「重试下发」按钮不会显示，故在子任务行提供入口。
+      return this.canRefetchRescan && row && row.status === 'FAILED'
+    },
+    subStatusColor (status) {
+      if (status === 'FINISHED') return 'green'
+      if (status === 'FAILED') return 'red'
+      if (status === 'RUNNING') return 'blue'
+      return 'orange'
+    },
     async refetchRescanSub (subId) {
       if (!this.jobId || !subId) return
       this.refetchLoadingSubId = subId
@@ -487,6 +558,32 @@ export default {
         this.$message.error(e.message || '重新获取失败')
       } finally {
         this.refetchLoadingSubId = ''
+      }
+    },
+    async retryDispatch () {
+      if (!this.jobId) return
+      this.retrying = true
+      try {
+        await retryVerifyFixDispatch(this.jobId)
+        this.$message.success('重试下发已提交')
+        await this.loadWorkspace()
+      } catch (e) {
+        this.$message.error((e && e.message) || '重试下发失败')
+      } finally {
+        this.retrying = false
+      }
+    },
+    async retryDispatchSub (subId) {
+      if (!this.jobId || !subId) return
+      this.retryingSubId = subId
+      try {
+        await retryVerifyFixDispatchSub(this.jobId, subId)
+        this.$message.success('已重新下发该子任务')
+        await this.loadWorkspace()
+      } catch (e) {
+        this.$message.error((e && e.message) || '重试下发失败')
+      } finally {
+        this.retryingSubId = ''
       }
     },
     liveRowKey (row, index) {
@@ -630,6 +727,8 @@ export default {
 .workspace-meta { color: rgba(0,0,0,.55); font-size: 13px; }
 .progress-tag { margin-left: 8px; color: rgba(0,0,0,.45); font-size: 13px; }
 .constraint-row { margin-top: 12px; }
+.retry-hint { margin-top: 12px; }
+.retry-warn { color: #f5222d; font-weight: 500; }
 .phase-banner { margin-bottom: 16px; }
 .phase-box { border: 1px solid #e8e8e8; border-radius: 4px; padding: 12px 16px; background: #fafafa; }
 .phase-box h4 { margin-bottom: 8px; }
@@ -643,8 +742,16 @@ export default {
 .timeline-at { font-size: 12px; color: rgba(0,0,0,.45); }
 .survey-toolbar { margin-bottom: 8px; }
 .api-hint { margin-left: 8px; font-size: 12px; color: rgba(0,0,0,.45); }
+.survey-retry-toolbar { margin-bottom: 12px; }
+.survey-retry-toolbar .api-hint {
+  font-size: 12px;
+  color: rgba(0,0,0,.45);
+  font-family: Consolas, monospace;
+  margin-left: 12px;
+}
 .muted { color: rgba(0,0,0,.45); }
 .path-code { font-size: 11px; word-break: break-all; }
+.sub-error-text { color: rgba(0,0,0,.65); font-size: 12px; }
 .related-links { margin-top: 12px; }
 .e2e-file-input { display: none; }
 .e2e-file-name { margin-left: 8px; color: rgba(0,0,0,.65); }

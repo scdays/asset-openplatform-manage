@@ -151,7 +151,7 @@ const columns = [
   { title: '引擎', dataIndex: 'adapterMode', scopedSlots: { customRender: 'adapterMode' }, width: 100 },
   { title: '实例', dataIndex: 'instanceCount', width: 64 },
   { title: '创建时间', dataIndex: 'createdAt', scopedSlots: { customRender: 'createdAt' }, width: 170 },
-  { title: '操作', scopedSlots: { customRender: 'action' }, width: 120, fixed: 'right' }
+  { title: '操作', scopedSlots: { customRender: 'action' }, width: 150, fixed: 'right' }
 ]
 
 export default {

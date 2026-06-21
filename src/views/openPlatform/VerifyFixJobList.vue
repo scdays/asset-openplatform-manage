@@ -72,9 +72,21 @@
         <span slot="status" slot-scope="text">
           <a-tag :color="statusColor(text)">{{ text || '-' }}</a-tag>
         </span>
+        <span slot="retryCount" slot-scope="text">
+          <span v-if="!text">-</span>
+          <a-tooltip v-else>
+            <template slot="title">自动重试 {{ text }}/5 次，达上限后停止自动重试，可手动重试</template>
+            <a-tag :color="text >= 5 ? 'red' : 'orange'">{{ text }}/5</a-tag>
+          </a-tooltip>
+        </span>
         <span slot="createdAt" slot-scope="text">{{ formatDateTime(text) }}</span>
         <span slot="action" slot-scope="text, record">
           <a @click="goWorkspace(record)">工作台</a>
+          <a-divider type="vertical" />
+          <a v-if="record.status === 'DISPATCH_FAILED'"
+             :disabled="retryingJobId === record.jobId"
+             @click="retryDispatch(record)">{{ retryingJobId === record.jobId ? '重试中…' : '重试下发' }}</a>
+          <span v-else class="muted">-</span>
         </span>
       </a-table>
     </a-card>
@@ -82,18 +94,19 @@
 </template>
 
 <script>
-import { listVerifyFixJobs } from '@/api/openPlatform/verifyFix'
+import { listVerifyFixJobs, retryVerifyFixDispatch } from '@/api/openPlatform/verifyFix'
 
 const columns = [
   { title: 'jobId', dataIndex: 'jobId', scopedSlots: { customRender: 'jobId' }, width: 140 },
   { title: 'caseId', dataIndex: 'caseId', scopedSlots: { customRender: 'caseId' }, width: 140 },
   { title: 'partnerId', dataIndex: 'partnerId', width: 120, ellipsis: true },
-  { title: '状态', dataIndex: 'status', scopedSlots: { customRender: 'status' }, width: 100 },
+  { title: '状态', dataIndex: 'status', scopedSlots: { customRender: 'status' }, width: 110 },
+  { title: '重试', dataIndex: 'retryCount', scopedSlots: { customRender: 'retryCount' }, width: 80 },
   { title: '条数', dataIndex: 'itemCount', width: 64 },
   { title: '进度', dataIndex: 'progress', width: 72 },
   { title: '复扫 sub', dataIndex: 'rescanSubCount', width: 80 },
   { title: '创建时间', dataIndex: 'createdAt', scopedSlots: { customRender: 'createdAt' }, width: 170 },
-  { title: '操作', scopedSlots: { customRender: 'action' }, width: 90, fixed: 'right' }
+  { title: '操作', scopedSlots: { customRender: 'action' }, width: 150, fixed: 'right' }
 ]
 
 export default {
@@ -103,6 +116,7 @@ export default {
       columns,
       rows: [],
       loading: false,
+      retryingJobId: '',
       queryParam: {
         partnerId: undefined,
         jobId: undefined,
@@ -166,6 +180,27 @@ export default {
     },
     goCase (caseId) {
       this.$router.push({ name: 'OperationCaseWorkspace', params: { caseId } })
+    },
+    retryDispatch (record) {
+      const jobId = record && record.jobId
+      if (!jobId) return
+      this.$confirm({
+        title: '手动重试下发复扫',
+        content: `确认对 ${jobId} 手动重新下发复扫？手动重试不受自动重试 5 次上限约束。`,
+        onOk: () => this.doRetryDispatch(jobId)
+      })
+    },
+    async doRetryDispatch (jobId) {
+      this.retryingJobId = jobId
+      try {
+        await retryVerifyFixDispatch(jobId)
+        this.$message.success('重试下发已提交')
+        await this.loadData()
+      } catch (e) {
+        this.$message.error((e && e.message) || '重试下发失败')
+      } finally {
+        this.retryingJobId = ''
+      }
     },
     statusColor (status) {
       if (status === 'FINISHED') return 'green'

@@ -40,6 +40,16 @@ export function refetchVerifyFixRescanResults (jobId, subId) {
   )
 }
 
+/** 手动重试下发复扫（人工介入，不受自动重试 5 次上限约束） */
+export function retryVerifyFixDispatch (jobId) {
+  return openApiRequest.post(`${PREFIX}/jobs/${encodeURIComponent(jobId)}/retry-dispatch`)
+}
+
+/** 手动重试单个复扫子任务（仅重新下发指定 sub） */
+export function retryVerifyFixDispatchSub (jobId, subId) {
+  return openApiRequest.post(`${PREFIX}/jobs/${encodeURIComponent(jobId)}/subs/${encodeURIComponent(subId)}/retry-dispatch`)
+}
+
 /** 待修复核验实例列表（列表页「进行中」筛选） */
 export function listVerifyFixPendingInstances (partnerId, options = {}) {
   const params = { partnerId, limit: options.limit || 200 }

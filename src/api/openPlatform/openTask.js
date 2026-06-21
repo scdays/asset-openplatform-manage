@@ -58,3 +58,21 @@ export function refetchOpenTaskSurveyResults (taskId, subId) {
     { params: { subId }, silent: true }
   )
 }
+
+/** 重新获取单个子任务的原始扫描报告（重新下载并归档到文件服务） */
+export function refetchOpenTaskSubReport (taskId, subId) {
+  return openApiRequest.post(
+    `${PREFIX}/${encodeURIComponent(taskId)}/subs/${encodeURIComponent(subId)}/report-refetch`,
+    null,
+    { silent: true }
+  )
+}
+
+/** 重新获取该任务下所有未归档/失败子任务的原始扫描报告 */
+export function refetchAllOpenTaskReports (taskId) {
+  return openApiRequest.post(
+    `${PREFIX}/${encodeURIComponent(taskId)}/report-refetch-all`,
+    null,
+    { silent: true }
+  )
+}
