@@ -212,7 +212,7 @@ const webhookColumns = [
   { title: '事件类型', dataIndex: 'eventType', scopedSlots: { customRender: 'eventType' }, width: 180 },
   { title: 'callbackUrl', dataIndex: 'callbackUrl', ellipsis: true },
   { title: 'HTTP', dataIndex: 'httpStatus', scopedSlots: { customRender: 'httpStatus' }, width: 90 },
-  { title: '重试次数', dataIndex: 'retryCount', width: 110 },
+  { title: '投递次数', dataIndex: 'attemptCount', width: 88, customRender: text => (text == null || text <= 1 ? '1' : String(text)) },
   { title: '状态', dataIndex: 'status', scopedSlots: { customRender: 'status' }, width: 110 },
   { title: '创建时间', dataIndex: 'createdAt', scopedSlots: { customRender: 'createdAt' }, width: 180 }
 ]

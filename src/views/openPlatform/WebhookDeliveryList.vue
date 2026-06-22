@@ -63,7 +63,7 @@
     <a-card :bordered="false" class="webhook-table-card">
       <div class="webhook-toolbar">
         <span class="api-hint">GET /internal/admin/webhook-deliveries</span>
-        <span class="toolbar-note">POST .../webhook-deliveries/{id}/retry</span>
+        <span class="toolbar-note">按 eventId 聚合展示；详情「重试历史」可查看每次 HTTP 投递</span>
       </div>
       <s-table
         ref="table"
@@ -96,10 +96,6 @@
         <span slot="nextRetryAt" slot-scope="text">{{ formatDateTime(text) }}</span>
         <span slot="action" slot-scope="text, record">
           <a @click="openDetail(record)">详情</a>
-          <template v-if="canDownloadExport(record)">
-            <a-divider type="vertical" />
-            <a :class="{ 'is-downloading': downloadingId === record.id }" @click="handleDownloadExport(record)">下载外发</a>
-          </template>
           <template v-if="record.resourceId">
             <a-divider type="vertical" />
             <a @click="goInvocations(record)">调用记录</a>
@@ -127,7 +123,6 @@ import EnumTag from '@/components/openPlatform/EnumTag'
 import { formatHttpStatus, httpStatusColor, labelOf, optionsOf } from '@/constants/openPlatformDisplay'
 import { listWebhookDeliveries, retryWebhookDelivery } from '@/api/openPlatform/invocation'
 import { resolveInvocationLinkQuery } from '@/utils/openPlatformLink'
-import { canDownloadExportDelivery, triggerExportDownload } from '@/utils/webhookExport'
 import WebhookDeliveryDetailDrawer from './components/WebhookDeliveryDetailDrawer'
 
 const columns = [
@@ -138,7 +133,7 @@ const columns = [
   { title: '关联资源', dataIndex: 'resourceId', scopedSlots: { customRender: 'resource' }, width: 180 },
   { title: 'callbackUrl', dataIndex: 'callbackUrl', ellipsis: true },
   { title: 'HTTP', dataIndex: 'httpStatus', scopedSlots: { customRender: 'httpStatus' }, width: 90 },
-  { title: '重试次数', dataIndex: 'retryCount', width: 90 },
+  { title: '投递次数', dataIndex: 'attemptCount', width: 90, customRender: text => (text == null || text <= 1 ? '1' : String(text)) },
   { title: '状态', dataIndex: 'status', scopedSlots: { customRender: 'status' }, width: 100 },
   { title: '创建时间', dataIndex: 'createdAt', scopedSlots: { customRender: 'createdAt' }, width: 170 },
   { title: '操作', scopedSlots: { customRender: 'action' }, width: 200, fixed: 'right' }
@@ -160,7 +155,6 @@ export default {
       },
       drawerVisible: false,
       selectedDeliveryId: null,
-      downloadingId: null,
       pagination: {
         pageSize: 10,
         showSizeChanger: true,
@@ -228,16 +222,6 @@ export default {
       this.$router.push({
         name: 'InvocationList',
         query: link
-      })
-    },
-    canDownloadExport: canDownloadExportDelivery,
-    handleDownloadExport (record) {
-      if (!canDownloadExportDelivery(record) || this.downloadingId != null) return
-      this.downloadingId = record.id
-      triggerExportDownload(record).catch(err => {
-        this.$message.error((err && err.message) || '下载外发文件失败')
-      }).finally(() => {
-        this.downloadingId = null
       })
     },
     openDetail (record) {

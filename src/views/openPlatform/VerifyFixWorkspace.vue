@@ -245,7 +245,7 @@
               </a-spin>
             </a-tab-pane>
 
-            <a-tab-pane key="exports" tab="外发与回调">
+            <a-tab-pane key="exports" tab="外发">
               <div class="section-label">VERIFY_FIX_SCAN 外发</div>
               <a-table
                 size="small"
@@ -253,19 +253,36 @@
                 :columns="exportColumns"
                 :data-source="workspace.exports || []"
                 :pagination="false"
-                style="margin-bottom: 16px;"
               />
-              <div class="section-label">Webhook</div>
+            </a-tab-pane>
+
+            <a-tab-pane key="callback" tab="Partner 回调">
               <a-table
                 size="small"
-                row-key="deliveryId"
+                row-key="id"
+                :scroll="{ x: 960 }"
                 :columns="webhookColumns"
                 :data-source="workspace.webhookDeliveries || []"
                 :pagination="false"
               >
                 <span slot="eventType" slot-scope="text">
-                  <enum-tag v-if="text" type="webhookEventType" :value="text" />
-                  <span v-else>-</span>
+                  <enum-tag type="webhookEventType" :value="text" />
+                </span>
+                <span slot="status" slot-scope="text">
+                  <enum-tag type="webhookDeliveryStatus" :value="text" />
+                </span>
+                <span slot="action" slot-scope="text, record">
+                  <a-button
+                    v-if="canDownloadExportDelivery(record)"
+                    type="link"
+                    size="small"
+                    :loading="downloadingId === record.id"
+                    @click="handleDownloadExport(record)"
+                  >
+                    <a-icon type="download" />
+                    下载外发
+                  </a-button>
+                  <span v-else class="muted">-</span>
                 </span>
               </a-table>
             </a-tab-pane>
@@ -335,6 +352,10 @@ import {
   completeVerifyFixAllUnfixed
 } from '@/api/openPlatform/mockVerifyFix'
 import { checkHealth } from '@/api/openPlatform/openPartnerApi'
+import {
+  canDownloadExportDelivery as canDownloadExport,
+  triggerExportDownload
+} from '@/utils/webhookExport'
 
 const subColumns = [
   { title: 'subId', dataIndex: 'subId', ellipsis: true },
@@ -354,6 +375,7 @@ const itemColumns = [
   { title: '前状态', dataIndex: 'previousStat', scopedSlots: { customRender: 'previousStat' }, width: 120 },
   { title: '结果', dataIndex: 'resultStat', scopedSlots: { customRender: 'resultStat' }, width: 120 },
   { title: '扫描器', dataIndex: 'scannerType', scopedSlots: { customRender: 'scannerType' }, width: 100 },
+  { title: '源 sub', dataIndex: 'sourceSubId', width: 120, ellipsis: true },
   { title: '复扫 sub', dataIndex: 'rescanSubId', width: 110, ellipsis: true },
   { title: '项状态', dataIndex: 'itemStatus', width: 90 }
 ]
@@ -367,10 +389,13 @@ const exportColumns = [
 ]
 
 const webhookColumns = [
-  { title: 'deliveryId', dataIndex: 'deliveryId', ellipsis: true },
+  { title: 'deliveryId', dataIndex: 'id', ellipsis: true },
   { title: 'eventType', dataIndex: 'eventType', scopedSlots: { customRender: 'eventType' } },
-  { title: 'status', dataIndex: 'status', width: 90 },
-  { title: 'httpStatus', dataIndex: 'httpStatus', width: 90 }
+  { title: 'status', dataIndex: 'status', scopedSlots: { customRender: 'status' } },
+  { title: 'httpStatus', dataIndex: 'httpStatus', width: 90 },
+  { title: '投递次数', dataIndex: 'attemptCount', width: 88, customRender: text => (text == null || text <= 1 ? '1' : String(text)) },
+  { title: 'createdAt', dataIndex: 'createdAt', width: 170 },
+  { title: '操作', scopedSlots: { customRender: 'action' }, width: 120, fixed: 'right' }
 ]
 
 const rescanVulnColumns = [
@@ -427,6 +452,7 @@ export default {
       surveyLoading: false,
       refetchLoadingSubId: '',
       retryingSubId: '',
+      downloadingId: null,
       xmlFile: null,
       xmlFileName: '',
       completing: false,
@@ -515,6 +541,26 @@ export default {
     this.loadHealth()
   },
   methods: {
+    canDownloadExportDelivery (record) {
+      return canDownloadExport(this.withPartnerContext(record))
+    },
+    handleDownloadExport (record) {
+      const row = this.withPartnerContext(record)
+      if (!canDownloadExport(row) || this.downloadingId != null) return
+      this.downloadingId = record.id
+      triggerExportDownload(row).catch(err => {
+        this.$message.error((err && err.message) || '下载外发文件失败')
+      }).finally(() => {
+        this.downloadingId = null
+      })
+    },
+    withPartnerContext (record) {
+      if (!record) return record
+      if (record.partnerId) return record
+      const job = this.workspace && this.workspace.job
+      const partnerId = job && job.partnerId
+      return partnerId ? { ...record, partnerId } : record
+    },
     scannerLabel: scannerTypeLabel,
     resetWorkspaceState () {
       this.workspace = null

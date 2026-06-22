@@ -60,6 +60,19 @@
             />
             <div class="field-helper">Partner 侧 Webhook 地址</div>
           </a-form-model-item>
+          <a-form-model-item label="可下载外发阶段" prop="downloadableStages">
+            <a-checkbox-group v-model="form.downloadableStages">
+              <a-checkbox
+                v-for="item in exportStageOptions"
+                :key="item.value"
+                :value="item.value"
+                style="margin-left: 0; margin-right: 12px; line-height: 28px;"
+              >
+                {{ item.label }}
+              </a-checkbox>
+            </a-checkbox-group>
+            <div class="field-helper">勾选该 Partner 允许下载的外发产物类型；不勾选则继承全局默认配置</div>
+          </a-form-model-item>
           <a-form-model-item label="capabilities" prop="capabilities">
             <capability-checkbox-group v-model="form.capabilities" />
           </a-form-model-item>
@@ -87,6 +100,7 @@ export default {
     return {
       partnerTypes: PARTNER_TYPES,
       partnerStatusOptions: optionsOf('partnerStatus'),
+      exportStageOptions: optionsOf('exportStage'),
       loading: false,
       submitting: false,
       form: {
@@ -96,6 +110,7 @@ export default {
         status: 'ACTIVE',
         rateLimitQps: undefined,
         defaultCallbackUrl: '',
+        downloadableStages: [],
         capabilities: []
       },
       rules: {
@@ -130,6 +145,7 @@ export default {
             status: data.status || 'ACTIVE',
             rateLimitQps: data.rateLimitQps,
             defaultCallbackUrl: data.defaultCallbackUrl || '',
+            downloadableStages: this.parseStages(data.downloadableStages),
             capabilities: data.capabilities || []
           }
         })
@@ -146,6 +162,7 @@ export default {
           partnerType: this.form.partnerType,
           capabilities: this.form.capabilities,
           defaultCallbackUrl: this.form.defaultCallbackUrl || undefined,
+          downloadableStages: this.formatStages(this.form.downloadableStages),
           rateLimitQps: this.form.rateLimitQps
         }
         const req = this.isEdit
@@ -179,6 +196,15 @@ export default {
     },
     goList () {
       this.$router.push({ name: 'PartnerList' })
+    },
+    parseStages (value) {
+      if (!value) return []
+      return String(value).split(',').map(v => v.trim()).filter(Boolean)
+    },
+    formatStages (arr) {
+      // 空数组 → undefined（不传，后端保持原值 / 继承全局）；非空 → 逗号分隔
+      if (!Array.isArray(arr) || !arr.length) return undefined
+      return arr.map(v => String(v).trim()).filter(Boolean).join(',')
     }
   }
 }

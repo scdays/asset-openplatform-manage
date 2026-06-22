@@ -142,7 +142,7 @@
                 :rows="workspace.surveySubs"
                 :show-retry="canRetrySurvey"
                 :show-refetch="canRefetchSurvey"
-                :show-report="canRefetchReport"
+                :show-report="showReportColumns"
                 :refetch-loading-sub-id="refetchLoadingSubId"
                 :report-loading-sub-id="reportLoadingSubId"
                 @retry-sub="retrySurveyDispatch"
@@ -298,7 +298,8 @@
             <a-tab-pane key="callback" tab="Partner 回调">
               <a-table
                 size="small"
-                row-key="deliveryId"
+                row-key="id"
+                :scroll="{ x: 960 }"
                 :columns="webhookColumns"
                 :data-source="workspace.webhookDeliveries || []"
                 :pagination="false"
@@ -308,6 +309,19 @@
                 </span>
                 <span slot="status" slot-scope="text">
                   <enum-tag type="webhookDeliveryStatus" :value="text" />
+                </span>
+                <span slot="action" slot-scope="text, record">
+                  <a-button
+                    v-if="canDownloadExportDelivery(record)"
+                    type="link"
+                    size="small"
+                    :loading="downloadingId === record.id"
+                    @click="handleDownloadExport(record)"
+                  >
+                    <a-icon type="download" />
+                    下载外发
+                  </a-button>
+                  <span v-else class="muted">-</span>
                 </span>
               </a-table>
             </a-tab-pane>
@@ -321,6 +335,10 @@
 <script>
 import EnumTag from '@/components/openPlatform/EnumTag'
 import { getOpenTaskWorkspace, getOpenTaskSurveyResults, retryOpenTaskDispatch, refetchOpenTaskSurveyResults, refetchOpenTaskSubReport } from '@/api/openPlatform/openTask'
+import {
+  canDownloadExportDelivery as canDownloadExport,
+  triggerExportDownload
+} from '@/utils/webhookExport'
 
 const SubTaskTable = {
   name: 'SubTaskTable',
@@ -351,7 +369,12 @@ const SubTaskTable = {
         PENDING: { color: 'blue', text: '待归档' },
         WAITING_PATH: { color: 'orange', text: '等待报告路径' }
       }
-      return map[status] || { color: 'default', text: status || '-' }
+      const normalized = (status || '').trim()
+      if (!normalized) {
+        // 未开始/空状态：避免 Ant Tag 的 default 灰底导致文字不可读
+        return { color: 'geekblue', text: '未开始' }
+      }
+      return map[normalized] || { color: 'geekblue', text: normalized }
     }
   },
   render (h) {
@@ -457,11 +480,13 @@ const instanceColumns = [
 ]
 
 const webhookColumns = [
-  { title: 'deliveryId', dataIndex: 'deliveryId', ellipsis: true },
+  { title: 'deliveryId', dataIndex: 'id', ellipsis: true },
   { title: 'eventType', dataIndex: 'eventType', scopedSlots: { customRender: 'eventType' } },
   { title: 'status', dataIndex: 'status', scopedSlots: { customRender: 'status' } },
   { title: 'httpStatus', dataIndex: 'httpStatus', width: 90 },
-  { title: 'createdAt', dataIndex: 'createdAt', width: 170 }
+  { title: '投递次数', dataIndex: 'attemptCount', width: 88, customRender: text => (text == null || text <= 1 ? '1' : String(text)) },
+  { title: 'createdAt', dataIndex: 'createdAt', width: 170 },
+  { title: '操作', scopedSlots: { customRender: 'action' }, width: 120, fixed: 'right' }
 ]
 
 const surveyCell = (text) => (text === undefined || text === null || text === '' ? '-' : String(text))
@@ -558,7 +583,8 @@ export default {
       surveySubId: undefined,
       retryLoading: false,
       refetchLoadingSubId: '',
-      reportLoadingSubId: ''
+      reportLoadingSubId: '',
+      downloadingId: null
     }
   },
   computed: {
@@ -572,6 +598,10 @@ export default {
     canRefetchSurvey () {
       const task = this.workspace && this.workspace.task
       return task && task.adapterMode === 'task-center' && (task.taskPhase == null || task.taskPhase <= 1)
+    },
+    /** task-center 排查子任务始终展示报告列；数据随 Kafka 异步回填 */
+    showReportColumns () {
+      return this.canRefetchSurvey
     },
     canRefetchReport () {
       const task = this.workspace && this.workspace.task
@@ -660,6 +690,25 @@ export default {
     }
   },
   methods: {
+    canDownloadExportDelivery (record) {
+      return canDownloadExport(this.withPartnerContext(record))
+    },
+    handleDownloadExport (record) {
+      const row = this.withPartnerContext(record)
+      if (!canDownloadExport(row) || this.downloadingId != null) return
+      this.downloadingId = record.id
+      triggerExportDownload(row).catch(err => {
+        this.$message.error((err && err.message) || '下载外发文件失败')
+      }).finally(() => {
+        this.downloadingId = null
+      })
+    },
+    withPartnerContext (record) {
+      if (!record) return record
+      if (record.partnerId) return record
+      const partnerId = this.workspace && this.workspace.task && this.workspace.task.partnerId
+      return partnerId ? { ...record, partnerId } : record
+    },
     onTabChange (tabKey) {
       this.refreshWorkspaceData(tabKey)
     },
