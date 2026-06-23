@@ -34,6 +34,7 @@ export const OPENAPI_TAGS = [
   { value: 'tasks', label: '任务', color: 'blue' },
   { value: 'instances', label: '实例', color: 'cyan' },
   { value: 'exports', label: '外发', color: 'gold' },
+  { value: 'artifacts', label: '产物', color: 'gold' },
   { value: 'webhooks', label: 'Webhook', color: 'geekblue' }
 ]
 
@@ -42,6 +43,7 @@ export const DOMAINS = [
   { value: 'TASK', label: '任务', color: 'blue' },
   { value: 'INSTANCE', label: '实例', color: 'cyan' },
   { value: 'EXPORT', label: '外发', color: 'gold' },
+  { value: 'ARTIFACT', label: '产物', color: 'gold' },
   { value: 'WEBHOOK', label: 'Webhook', color: 'geekblue' }
 ]
 
@@ -55,6 +57,7 @@ export const CAPABILITIES = [
   { value: 'INSTANCE_ARCHIVE', label: '实例备案', color: 'cyan' },
   { value: 'INSTANCE_VERIFY_FIX', label: '修复核验', color: 'cyan' },
   { value: 'EXPORT_READ', label: '外发读取', color: 'gold' },
+  { value: 'ARTIFACT_READ', label: '产物读取', color: 'gold' },
   { value: 'EVENT_SUBSCRIBE', label: '事件订阅', color: 'geekblue' }
 ]
 
@@ -77,8 +80,7 @@ export const WEBHOOK_EVENT_TYPES = [
 export const EXPORT_STAGES = [
   { value: 'TASK_COMPLETED', label: '任务完成外发包', color: 'blue' },
   { value: 'VERIFY_SCAN', label: '验证扫描外发', color: 'cyan' },
-  { value: 'VERIFY_FIX_SCAN', label: '修复核验扫描外发', color: 'purple' },
-  { value: 'RAW_SCAN_ARCHIVE', label: '原始扫描报告（ARTIFACT_READY）', color: 'gold' }
+  { value: 'VERIFY_FIX_SCAN', label: '修复核验扫描外发', color: 'purple' }
 ]
 
 export const OPEN_TASK_STATUSES = [
@@ -147,7 +149,11 @@ export const API_OPERATIONS = [
   { value: 'verifyFixInstanceBatch', label: '批量修复核验', color: 'cyan' },
   { value: 'getExport', label: '查询外发包元数据', color: 'gold' },
   { value: 'downloadExport', label: '下载外发文件', color: 'gold' },
-  { value: 'listTaskExports', label: '查询任务外发列表', color: 'gold' }
+  { value: 'listTaskExports', label: '查询任务外发列表', color: 'gold' },
+  { value: 'getArtifact', label: '查询产物元数据', color: 'gold' },
+  { value: 'downloadArtifact', label: '下载产物文件', color: 'gold' },
+  { value: 'listTaskArtifacts', label: '查询任务产物列表', color: 'gold' },
+  { value: 'listExportArtifacts', label: '查询外发关联产物', color: 'gold' }
 ]
 
 /** 附录 A · vulInfoStat */

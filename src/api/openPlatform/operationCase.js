@@ -1,4 +1,5 @@
 import openApiRequest from '@/utils/openApiRequest'
+import { normalizeListPayload, unwrapOpenApiPayload } from '@/utils/openApiPayload'
 
 const PREFIX = '/internal/admin/operation-cases'
 
@@ -13,6 +14,19 @@ function removeEmptyParams (params) {
   return result
 }
 
+function normalizeOperationCasePage (res, defaultPage, defaultSize) {
+  const raw = unwrapOpenApiPayload(res) || {}
+  const items = normalizeListPayload(raw)
+  const page = Number(raw.page || raw.pageNo || defaultPage || 1)
+  const size = Number(raw.size || raw.pageSize || defaultSize || 20)
+  const total = Number(
+    raw.total !== undefined && raw.total !== null
+      ? raw.total
+      : (raw.totalCount !== undefined && raw.totalCount !== null ? raw.totalCount : items.length)
+  )
+  return { items, page, size, total }
+}
+
 export function listOperationCases (params = {}) {
   const query = removeEmptyParams({
     page: params.page || params.pageNo || 1,
@@ -25,7 +39,9 @@ export function listOperationCases (params = {}) {
     startedFrom: params.startedFrom,
     startedTo: params.startedTo
   })
-  return openApiRequest.get(PREFIX, { params: query })
+  return openApiRequest.get(PREFIX, { params: query }).then(res => {
+    return normalizeOperationCasePage(res, query.page, query.size)
+  })
 }
 
 export function getOperationCaseWorkspace (caseId) {

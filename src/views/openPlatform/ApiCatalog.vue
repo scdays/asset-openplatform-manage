@@ -82,14 +82,24 @@
         :data="loadData"
         :alert="false"
         :pagination="pagination"
+        :scroll="{ x: 1360 }"
         show-pagination="auto"
       >
         <span slot="serial" slot-scope="text, record, index">{{ index + 1 }}</span>
         <span slot="operationId" slot-scope="text">
-          <enum-tag v-if="text" type="apiOperation" :value="text" with-code />
+          <a-tooltip v-if="text" :title="labelWithCode('apiOperation', text)">
+            <span class="cell-ellipsis">
+              <enum-tag type="apiOperation" :value="text" with-code :show-tooltip="false" />
+            </span>
+          </a-tooltip>
           <span v-else>-</span>
         </span>
-        <span slot="operationName" slot-scope="text">{{ text || '-' }}</span>
+        <span slot="operationName" slot-scope="text">
+          <a-tooltip v-if="text" :title="text">
+            <span class="cell-ellipsis">{{ text }}</span>
+          </a-tooltip>
+          <span v-else>-</span>
+        </span>
         <span slot="capabilityCode" slot-scope="text">
           <enum-tag type="capability" :value="text" />
         </span>
@@ -99,8 +109,18 @@
         <span slot="method" slot-scope="text">
           <enum-tag type="httpMethod" :value="text" />
         </span>
-        <span slot="path" slot-scope="text">{{ text || '-' }}</span>
-        <span slot="tags" slot-scope="text">{{ formatTagList(text) }}</span>
+        <span slot="path" slot-scope="text">
+          <a-tooltip v-if="text" :title="text">
+            <span class="cell-ellipsis cell-mono">{{ text }}</span>
+          </a-tooltip>
+          <span v-else>-</span>
+        </span>
+        <span slot="tags" slot-scope="text">
+          <a-tooltip v-if="text && text.length" :title="formatTagList(text)">
+            <span class="cell-ellipsis">{{ formatTagList(text) }}</span>
+          </a-tooltip>
+          <span v-else>-</span>
+        </span>
       </s-table>
     </a-card>
   </div>
@@ -109,18 +129,18 @@
 <script>
 import { STable } from '@/components'
 import EnumTag from '@/components/openPlatform/EnumTag'
-import { formatTags, optionsOf } from '@/constants/openPlatformDisplay'
+import { formatTags, labelWithCode, optionsOf } from '@/constants/openPlatformDisplay'
 import { listApiCatalogOperations } from '@/api/openPlatform/catalog'
 
 const columns = [
-  { title: '序号', scopedSlots: { customRender: 'serial' }, width: 60 },
-  { title: 'API 操作', dataIndex: 'operationId', scopedSlots: { customRender: 'operationId' }, width: 200 },
-  { title: '名称', dataIndex: 'operationName', scopedSlots: { customRender: 'operationName' }, width: 180 },
-  { title: '能力码', dataIndex: 'capabilityCode', scopedSlots: { customRender: 'capabilityCode' }, width: 180 },
-  { title: '状态', dataIndex: 'status', scopedSlots: { customRender: 'status' }, width: 110 },
-  { title: 'Method', dataIndex: 'method', scopedSlots: { customRender: 'method' }, width: 100 },
-  { title: 'Path', dataIndex: 'path', scopedSlots: { customRender: 'path' }, ellipsis: true },
-  { title: 'Tag', dataIndex: 'tags', scopedSlots: { customRender: 'tags' }, width: 180 }
+  { title: '序号', scopedSlots: { customRender: 'serial' }, width: 60, fixed: 'left' },
+  { title: '名称', dataIndex: 'operationName', scopedSlots: { customRender: 'operationName' }, width: 200, ellipsis: true },
+  { title: '能力码', dataIndex: 'capabilityCode', scopedSlots: { customRender: 'capabilityCode' }, width: 160 },
+  { title: '状态', dataIndex: 'status', scopedSlots: { customRender: 'status' }, width: 100 },
+  { title: 'Method', dataIndex: 'method', scopedSlots: { customRender: 'method' }, width: 90 },
+  { title: 'API 操作', dataIndex: 'operationId', scopedSlots: { customRender: 'operationId' }, width: 240, ellipsis: true },
+  { title: 'Path', dataIndex: 'path', scopedSlots: { customRender: 'path' }, width: 320, ellipsis: true },
+  { title: 'Tag', dataIndex: 'tags', scopedSlots: { customRender: 'tags' }, width: 160, ellipsis: true }
 ]
 
 export default {
@@ -166,6 +186,7 @@ export default {
   },
   methods: {
     formatTagList: formatTags,
+    labelWithCode,
     resetQuery () {
       this.queryParam = {
         capabilityCode: undefined,
@@ -243,6 +264,40 @@ export default {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.cell-ellipsis {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cell-mono {
+  font-family: Consolas, monospace;
+  font-size: 12px;
+}
+
+.cell-ellipsis :deep(.ant-tag) {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+
+.api-catalog-page :deep(.ant-table table) {
+  table-layout: fixed;
+}
+
+.api-catalog-page :deep(.ant-table-tbody > tr > td),
+.api-catalog-page :deep(.ant-table-thead > tr > th) {
+  overflow: hidden;
+}
+
+.api-catalog-page :deep(.ant-table-tbody > tr > td .ant-tag) {
+  margin-right: 0;
 }
 
 .api-hint {

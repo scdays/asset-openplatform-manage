@@ -87,10 +87,26 @@
         :data="loadData"
         :alert="false"
         :pagination="pagination"
+        :scroll="{ x: 1280 }"
         show-pagination="auto"
       >
         <span slot="caseId" slot-scope="text">
-          <code>{{ text }}</code>
+          <a-tooltip v-if="text" :title="text">
+            <code class="cell-ellipsis">{{ text }}</code>
+          </a-tooltip>
+          <span v-else class="muted">-</span>
+        </span>
+        <span slot="partnerId" slot-scope="text">
+          <a-tooltip v-if="text" :title="text">
+            <span class="cell-ellipsis">{{ text }}</span>
+          </a-tooltip>
+          <span v-else class="muted">-</span>
+        </span>
+        <span slot="caseTitle" slot-scope="text">
+          <a-tooltip v-if="text" :title="text">
+            <span class="cell-ellipsis">{{ text }}</span>
+          </a-tooltip>
+          <span v-else class="muted">-</span>
         </span>
         <span slot="caseType" slot-scope="text">
           <enum-tag type="operationCaseType" :value="text" />
@@ -99,11 +115,15 @@
           <enum-tag type="operationCaseStatus" :value="text" />
         </span>
         <span slot="primaryResourceType" slot-scope="text">
-          <enum-tag v-if="text" type="primaryResourceType" :value="text" with-code />
+          <a-tooltip v-if="text" :title="labelWithCode('primaryResourceType', text)">
+            <span class="cell-ellipsis"><enum-tag type="primaryResourceType" :value="text" with-code /></span>
+          </a-tooltip>
           <span v-else class="muted">-</span>
         </span>
         <span slot="primaryResourceId" slot-scope="text">
-          <code v-if="text">{{ text }}</code>
+          <a-tooltip v-if="text" :title="text">
+            <code class="cell-ellipsis">{{ text }}</code>
+          </a-tooltip>
           <span v-else class="muted">-</span>
         </span>
         <span slot="startedAt" slot-scope="text">{{ formatDateTime(text) }}</span>
@@ -118,17 +138,17 @@
 <script>
 import { STable } from '@/components'
 import EnumTag from '@/components/openPlatform/EnumTag'
-import { optionsOf } from '@/constants/openPlatformDisplay'
+import { labelWithCode, optionsOf } from '@/constants/openPlatformDisplay'
 import { listOperationCases, backfillOperationCases } from '@/api/openPlatform/operationCase'
 
 const columns = [
-  { title: 'caseId', dataIndex: 'caseId', scopedSlots: { customRender: 'caseId' }, width: 150 },
-  { title: '标题', dataIndex: 'title', ellipsis: true },
+  { title: 'caseId', dataIndex: 'caseId', scopedSlots: { customRender: 'caseId' }, width: 150, fixed: 'left' },
+  { title: 'partnerId', dataIndex: 'partnerId', scopedSlots: { customRender: 'partnerId' }, width: 120, ellipsis: true },
+  { title: '标题', dataIndex: 'title', scopedSlots: { customRender: 'caseTitle' }, width: 200, ellipsis: true },
   { title: '类型', dataIndex: 'caseType', scopedSlots: { customRender: 'caseType' }, width: 130 },
+  { title: '主资源类型', dataIndex: 'primaryResourceType', scopedSlots: { customRender: 'primaryResourceType' }, width: 190, ellipsis: true },
   { title: '状态', dataIndex: 'status', scopedSlots: { customRender: 'status' }, width: 100 },
-  { title: 'partnerId', dataIndex: 'partnerId', width: 120, ellipsis: true },
-  { title: '主资源类型', dataIndex: 'primaryResourceType', scopedSlots: { customRender: 'primaryResourceType' }, width: 150 },
-  { title: '主资源 ID', dataIndex: 'primaryResourceId', scopedSlots: { customRender: 'primaryResourceId' }, width: 140 },
+  { title: '主资源 ID', dataIndex: 'primaryResourceId', scopedSlots: { customRender: 'primaryResourceId' }, width: 220, ellipsis: true },
   { title: '开始时间', dataIndex: 'startedAt', scopedSlots: { customRender: 'startedAt' }, width: 170 },
   { title: '操作', scopedSlots: { customRender: 'action' }, width: 90, fixed: 'right' }
 ]
@@ -153,20 +173,21 @@ export default {
         showSizeChanger: true,
         pageSizeOptions: ['10', '20', '50']
       },
-      backfillLoading: false
+      backfillLoading: false,
+      loadData: parameter => {
+        const page = (parameter && parameter.pageNo) || 1
+        const size = (parameter && parameter.pageSize) || 20
+        return listOperationCases({ ...this.queryParam, page, size }).then(res => ({
+          pageNo: (res && res.page) || page,
+          pageSize: size,
+          totalCount: (res && res.total) || 0,
+          data: (res && res.items) || []
+        }))
+      }
     }
   },
   methods: {
-    loadData (parameter) {
-      const page = (parameter && parameter.pageNo) || 1
-      const size = (parameter && parameter.pageSize) || 20
-      return listOperationCases({ ...this.queryParam, page, size }).then(res => ({
-        pageNo: page,
-        pageSize: size,
-        totalCount: (res && res.total) || 0,
-        data: (res && res.items) || []
-      }))
-    },
+    labelWithCode,
     resetQuery () {
       this.queryParam = {
         partnerId: undefined,
@@ -206,6 +227,19 @@ export default {
 <style scoped>
 .toolbar { margin-bottom: 12px; }
 .api-hint { color: rgba(0,0,0,.45); font-size: 12px; }
+.cell-ellipsis {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cell-ellipsis :deep(.ant-tag) {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
 .muted { color: rgba(0,0,0,.45); }
 .search-card { margin-bottom: 16px; }
 </style>

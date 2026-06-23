@@ -4,7 +4,7 @@ import openPartnerRequest, { setPartnerSession } from '@/utils/openPartnerReques
 export const E2E_CAPABILITIES = [
   'TASK_READ', 'TASK_WRITE',
   'INSTANCE_READ', 'INSTANCE_VERIFY', 'INSTANCE_REMEDIATE',
-  'INSTANCE_VERIFY_FIX', 'INSTANCE_ARCHIVE', 'EXPORT_READ', 'EVENT_SUBSCRIBE'
+  'INSTANCE_VERIFY_FIX', 'INSTANCE_ARCHIVE', 'EXPORT_READ', 'ARTIFACT_READ', 'EVENT_SUBSCRIBE'
 ]
 
 export function checkHealth () {

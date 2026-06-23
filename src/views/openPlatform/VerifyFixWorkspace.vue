@@ -145,23 +145,78 @@
               </a-table>
             </a-tab-pane>
 
-            <a-tab-pane key="items" tab="待核验实例">
+            <a-tab-pane key="items" tab="漏洞实例">
+              <div class="survey-toolbar">
+                <a-select
+                  v-model="instanceTaskId"
+                  placeholder="选择 OPEN 任务"
+                  style="width: 200px; margin-right: 8px;"
+                  allow-clear
+                  @change="onInstanceScopeChange"
+                >
+                  <a-select-option
+                    v-for="t in instanceTaskOptions"
+                    :key="t.taskId"
+                    :value="t.taskId"
+                  >
+                    {{ t.taskId }}
+                  </a-select-option>
+                </a-select>
+                <a-select
+                  v-model="instanceSubId"
+                  placeholder="选择复扫 sub"
+                  style="width: 280px; margin-right: 8px;"
+                  allow-clear
+                  @change="loadVerifyFixInstances"
+                >
+                  <a-select-option
+                    v-for="sub in instanceSubOptions"
+                    :key="sub.subId"
+                    :value="sub.subId"
+                  >
+                    {{ sub.scannerLabel || scannerLabel(sub.scannerType) }} · {{ sub.subId }}
+                  </a-select-option>
+                </a-select>
+                <a-button :loading="instanceLoading" @click="loadVerifyFixInstances">刷新</a-button>
+                <span class="api-hint">taskId+subId · 实例+log 关联</span>
+              </div>
+              <a-alert
+                v-if="instanceScope && instanceScope.hint"
+                :type="instanceScope.verified ? 'success' : 'info'"
+                show-icon
+                :message="instanceScope.hint"
+                style="margin: 12px 0;"
+              />
               <a-table
+                class="instance-table"
                 size="small"
                 row-key="vulInfoId"
-                :columns="itemColumns"
-                :data-source="workspace.job.items || []"
-                :pagination="{ pageSize: 20 }"
+                :scroll="{ x: 1680 }"
+                :columns="verifyInstanceColumns"
+                :data-source="instanceRows"
+                :loading="instanceLoading"
+                :pagination="{ pageSize: 20, showSizeChanger: true, showTotal: total => `共 ${total} 条` }"
               >
+                <span slot="vulInfoId" slot-scope="text">
+                  <code v-if="text" class="cell-wrap">{{ text }}</code>
+                  <span v-else class="muted">-</span>
+                </span>
                 <span slot="previousStat" slot-scope="text">
                   <enum-tag v-if="text != null && text !== ''" type="vulInfoStat" :value="text" with-code />
                   <span v-else>-</span>
                 </span>
                 <span slot="resultStat" slot-scope="text">
                   <enum-tag v-if="text != null && text !== ''" type="vulInfoStat" :value="text" with-code />
-                  <span v-else>-</span>
+                  <span v-else class="muted">待核验</span>
                 </span>
-                <span slot="scannerType" slot-scope="text">{{ scannerLabel(text) }}</span>
+                <span slot="vulInfoStat" slot-scope="text">
+                  <enum-tag v-if="text != null && text !== ''" type="vulInfoStat" :value="Number(text)" with-code />
+                  <span v-else class="muted">-</span>
+                </span>
+                <span slot="level" slot-scope="text">
+                  <enum-tag v-if="text != null && text !== ''" type="vulLevel" :value="Number(text)" with-code />
+                  <span v-else class="muted">-</span>
+                </span>
               </a-table>
             </a-tab-pane>
 
@@ -273,16 +328,26 @@
                 </span>
                 <span slot="action" slot-scope="text, record">
                   <a-button
+                    v-if="canDownloadArtifactDelivery(record)"
+                    type="link"
+                    size="small"
+                    :loading="downloadingArtifactId === record.id"
+                    @click="handleDownloadArtifact(record)"
+                  >
+                    <a-icon type="download" />
+                    下载产物
+                  </a-button>
+                  <a-button
                     v-if="canDownloadExportDelivery(record)"
                     type="link"
                     size="small"
-                    :loading="downloadingId === record.id"
+                    :loading="downloadingExportId === record.id"
                     @click="handleDownloadExport(record)"
                   >
                     <a-icon type="download" />
                     下载外发
                   </a-button>
-                  <span v-else class="muted">-</span>
+                  <span v-if="!canDownloadArtifactDelivery(record) && !canDownloadExportDelivery(record)" class="muted">-</span>
                 </span>
               </a-table>
             </a-tab-pane>
@@ -340,6 +405,7 @@
 import EnumTag from '@/components/openPlatform/EnumTag'
 import {
   getVerifyFixWorkspace,
+  getVerifyFixJobInstances,
   refetchVerifyFixRescanResults,
   retryVerifyFixDispatch,
   retryVerifyFixDispatchSub,
@@ -354,7 +420,9 @@ import {
 import { checkHealth } from '@/api/openPlatform/openPartnerApi'
 import {
   canDownloadExportDelivery as canDownloadExport,
-  triggerExportDownload
+  canDownloadArtifactDelivery as canDownloadArtifact,
+  triggerExportDownload,
+  triggerArtifactDownload
 } from '@/utils/webhookExport'
 
 const subColumns = [
@@ -367,6 +435,19 @@ const subColumns = [
   { title: 'surveyId', dataIndex: 'surveyId', ellipsis: true },
   { title: '报告路径', dataIndex: 'reportDownloadPath', scopedSlots: { customRender: 'reportPath' } },
   { title: '操作', scopedSlots: { customRender: 'subAction' }, width: 150, fixed: 'right' }
+]
+
+const verifyInstanceColumns = [
+  { title: 'vulInfoId', dataIndex: 'vulInfoId', scopedSlots: { customRender: 'vulInfoId' }, width: 360, fixed: 'left' },
+  { title: 'CVE', dataIndex: 'orgVulId', width: 140, ellipsis: true },
+  { title: '资产', dataIndex: 'address', width: 120, ellipsis: true },
+  { title: '端口', dataIndex: 'port', width: 72 },
+  { title: '漏洞', dataIndex: 'vulnName', width: 180, ellipsis: true },
+  { title: '等级', dataIndex: 'level', scopedSlots: { customRender: 'level' }, width: 100 },
+  { title: '核验前', dataIndex: 'previousStat', scopedSlots: { customRender: 'previousStat' }, width: 110 },
+  { title: '核验后', dataIndex: 'resultStat', scopedSlots: { customRender: 'resultStat' }, width: 110 },
+  { title: '当前状态', dataIndex: 'vulInfoStat', scopedSlots: { customRender: 'vulInfoStat' }, width: 110 },
+  { title: 'subId', dataIndex: 'subId', width: 140, ellipsis: true }
 ]
 
 const itemColumns = [
@@ -395,7 +476,7 @@ const webhookColumns = [
   { title: 'httpStatus', dataIndex: 'httpStatus', width: 90 },
   { title: '投递次数', dataIndex: 'attemptCount', width: 88, customRender: text => (text == null || text <= 1 ? '1' : String(text)) },
   { title: 'createdAt', dataIndex: 'createdAt', width: 170 },
-  { title: '操作', scopedSlots: { customRender: 'action' }, width: 120, fixed: 'right' }
+  { title: '操作', scopedSlots: { customRender: 'action' }, width: 180, fixed: 'right' }
 ]
 
 const rescanVulnColumns = [
@@ -436,6 +517,7 @@ export default {
       adapterMode: '',
       subColumns,
       itemColumns,
+      verifyInstanceColumns,
       exportColumns,
       webhookColumns,
       rescanVulnColumns,
@@ -450,9 +532,14 @@ export default {
       surveySubId: '',
       surveyResults: null,
       surveyLoading: false,
+      instanceTaskId: '',
+      instanceSubId: '',
+      instanceScope: null,
+      instanceLoading: false,
       refetchLoadingSubId: '',
       retryingSubId: '',
-      downloadingId: null,
+      downloadingExportId: null,
+      downloadingArtifactId: null,
       xmlFile: null,
       xmlFileName: '',
       completing: false,
@@ -520,6 +607,33 @@ export default {
         })
       })
       return flat
+    },
+    instanceRows () {
+      return (this.instanceScope && this.instanceScope.instances) || []
+    },
+    instanceTaskOptions () {
+      const tasks = (this.workspace && this.workspace.relatedTasks) || []
+      if (tasks.length) return tasks
+      const items = (this.workspace && this.workspace.job && this.workspace.job.items) || []
+      const ids = []
+      items.forEach(item => {
+        if (item && item.taskId && !ids.includes(item.taskId)) {
+          ids.push(item.taskId)
+        }
+      })
+      return ids.map(taskId => ({ taskId }))
+    },
+    instanceSubOptions () {
+      const subs = (this.workspace && this.workspace.rescanSubs) || []
+      if (!this.instanceTaskId) return subs
+      const items = (this.workspace && this.workspace.job && this.workspace.job.items) || []
+      const subIds = new Set()
+      items.forEach(item => {
+        if (item && item.taskId === this.instanceTaskId && item.rescanSubId) {
+          subIds.add(item.rescanSubId)
+        }
+      })
+      return subs.filter(sub => subIds.has(sub.subId))
     }
   },
   watch: {
@@ -544,14 +658,27 @@ export default {
     canDownloadExportDelivery (record) {
       return canDownloadExport(this.withPartnerContext(record))
     },
+    canDownloadArtifactDelivery (record) {
+      return canDownloadArtifact(this.withPartnerContext(record))
+    },
     handleDownloadExport (record) {
       const row = this.withPartnerContext(record)
-      if (!canDownloadExport(row) || this.downloadingId != null) return
-      this.downloadingId = record.id
+      if (!canDownloadExport(row) || this.downloadingExportId != null) return
+      this.downloadingExportId = record.id
       triggerExportDownload(row).catch(err => {
         this.$message.error((err && err.message) || '下载外发文件失败')
       }).finally(() => {
-        this.downloadingId = null
+        this.downloadingExportId = null
+      })
+    },
+    handleDownloadArtifact (record) {
+      const row = this.withPartnerContext(record)
+      if (!canDownloadArtifact(row) || this.downloadingArtifactId != null) return
+      this.downloadingArtifactId = record.id
+      triggerArtifactDownload(row).catch(err => {
+        this.$message.error((err && err.message) || '下载报告产物失败')
+      }).finally(() => {
+        this.downloadingArtifactId = null
       })
     },
     withPartnerContext (record) {
@@ -566,12 +693,54 @@ export default {
       this.workspace = null
       this.surveyResults = null
       this.surveySubId = ''
+      this.instanceScope = null
+      this.instanceTaskId = ''
+      this.instanceSubId = ''
       this.activeTab = 'overview'
       this.refetchLoadingSubId = ''
     },
     onTabChange (tabKey) {
       if (tabKey === 'rescanResults' && this.surveySubId) {
         this.loadSurveyResults()
+      } else if (tabKey === 'items') {
+        this.initInstanceScopeDefaults()
+        this.loadVerifyFixInstances()
+      }
+    },
+    initInstanceScopeDefaults () {
+      const tasks = this.instanceTaskOptions
+      if (!this.instanceTaskId && tasks.length) {
+        this.instanceTaskId = tasks[0].taskId
+      }
+      const subs = this.instanceSubOptions
+      if (!this.instanceSubId && subs.length) {
+        this.instanceSubId = subs[0].subId
+      }
+    },
+    onInstanceScopeChange () {
+      const subs = this.instanceSubOptions
+      if (subs.length && (!this.instanceSubId || !subs.some(s => s.subId === this.instanceSubId))) {
+        this.instanceSubId = subs[0].subId
+      }
+      this.loadVerifyFixInstances()
+    },
+    async loadVerifyFixInstances () {
+      if (!this.jobId) return
+      this.initInstanceScopeDefaults()
+      if (!this.instanceTaskId || !this.instanceSubId) {
+        this.instanceScope = { hint: '请选择 OPEN 任务与复扫 sub' }
+        return
+      }
+      this.instanceLoading = true
+      try {
+        this.instanceScope = await getVerifyFixJobInstances(this.jobId, {
+          taskId: this.instanceTaskId,
+          subId: this.instanceSubId
+        })
+      } catch (e) {
+        this.$message.error(e.message || '加载漏洞实例失败')
+      } finally {
+        this.instanceLoading = false
       }
     },
     canRefetchSub (row) {
@@ -666,6 +835,10 @@ export default {
           this.surveySubId = subs[0].subId
         } else {
           this.surveySubId = ''
+        }
+        if (this.activeTab === 'items') {
+          this.initInstanceScopeDefaults()
+          await this.loadVerifyFixInstances()
         }
       } catch (e) {
         this.workspace = null
@@ -796,6 +969,13 @@ export default {
   margin-left: 12px;
 }
 .muted { color: rgba(0,0,0,.45); }
+.cell-wrap {
+  display: block;
+  max-width: 100%;
+  white-space: normal;
+  word-break: break-all;
+  line-height: 1.4;
+}
 .path-code { font-size: 11px; word-break: break-all; }
 .sub-error-text { color: rgba(0,0,0,.65); font-size: 12px; }
 .related-links { margin-top: 12px; }
