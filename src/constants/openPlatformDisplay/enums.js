@@ -78,7 +78,7 @@ export const EXPORT_STAGES = [
   { value: 'TASK_COMPLETED', label: '任务完成外发包', color: 'blue' },
   { value: 'VERIFY_SCAN', label: '验证扫描外发', color: 'cyan' },
   { value: 'VERIFY_FIX_SCAN', label: '修复核验扫描外发', color: 'purple' },
-  { value: 'RAW_SCAN_ARCHIVE', label: '原始扫描报告', color: 'gold' }
+  { value: 'RAW_SCAN_ARCHIVE', label: '原始扫描报告（ARTIFACT_READY）', color: 'gold' }
 ]
 
 export const OPEN_TASK_STATUSES = [

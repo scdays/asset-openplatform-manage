@@ -1,20 +1,14 @@
 import { message } from 'ant-design-vue'
 import { downloadAdminExport } from '@/api/openPlatform/export'
 
+/**
+ * 是否展示「下载外发」：仅当后端根据 Partner 可下载外发阶段白名单明确返回 exportDownloadable=true。
+ */
 export function canDownloadExportDelivery (record) {
   if (!record || !record.exportId || !record.partnerId) {
     return false
   }
-  if (record.exportDownloadable === true) {
-    return true
-  }
-  // 兼容后端未显式返回 exportDownloadable 的 EXPORT_READY / ARTIFACT_READY 行
-  const eventType = record.eventType
-  if (record.exportDownloadable == null && eventType
-      && (eventType === 'EXPORT_READY' || eventType === 'ARTIFACT_READY')) {
-    return true
-  }
-  return false
+  return record.exportDownloadable === true
 }
 
 function parseContentDisposition (disposition) {

@@ -71,7 +71,12 @@
                 {{ item.label }}
               </a-checkbox>
             </a-checkbox-group>
-            <div class="field-helper">勾选该 Partner 允许下载的外发产物类型；不勾选则继承全局默认配置</div>
+            <div class="field-helper">
+              控制 downloadExport 允许下载的 open_export.export_stage。
+              「报告产物就绪 ARTIFACT_READY」对应「原始扫描报告 RAW_SCAN_ARCHIVE」；
+              「外发就绪 EXPORT_READY」对应任务完成/验证/修复核验结构化外发阶段。
+              不勾选则继承全局默认（含全部四类）。
+            </div>
           </a-form-model-item>
           <a-form-model-item label="capabilities" prop="capabilities">
             <capability-checkbox-group v-model="form.capabilities" />
