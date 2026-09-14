@@ -31,6 +31,16 @@ export function getVerifyFixWorkspace (jobId) {
   return openApiRequest.get(`${PREFIX}/jobs/${encodeURIComponent(jobId)}/workspace`)
 }
 
+/** 按 taskId+复扫 subId 查询漏洞实例 */
+export function getVerifyFixJobInstances (jobId, params = {}) {
+  return openApiRequest.get(`${PREFIX}/jobs/${encodeURIComponent(jobId)}/instances`, {
+    params: removeEmptyParams({
+      taskId: params.taskId,
+      subId: params.subId
+    })
+  })
+}
+
 /** 重新获取复扫子任务扫描结果（phase=3） */
 export function refetchVerifyFixRescanResults (jobId, subId) {
   return openApiRequest.post(

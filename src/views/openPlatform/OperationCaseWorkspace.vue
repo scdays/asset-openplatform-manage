@@ -19,14 +19,6 @@
           <div class="meta-row">
             caseId <code>{{ workspace.caseSummary.caseId }}</code>
             · partner <code>{{ workspace.caseSummary.partnerId }}</code>
-            · 主资源类型
-            <enum-tag
-              v-if="workspace.caseSummary.primaryResourceType"
-              type="primaryResourceType"
-              :value="workspace.caseSummary.primaryResourceType"
-              with-code
-            />
-            <span v-else>-</span>
             · 主资源 ID
             <code v-if="workspace.caseSummary.primaryResourceId">{{ workspace.caseSummary.primaryResourceId }}</code>
             <span v-else>-</span>

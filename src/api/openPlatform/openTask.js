@@ -31,6 +31,14 @@ export function getOpenTaskWorkspace (taskId) {
   return openApiRequest.get(`${PREFIX}/${encodeURIComponent(taskId)}/workspace`)
 }
 
+export function getOpenTaskInstances (taskId, params = {}) {
+  const query = removeEmptyParams({
+    scanPhase: params.scanPhase != null ? params.scanPhase : 1,
+    subId: params.subId
+  })
+  return openApiRequest.get(`${PREFIX}/${encodeURIComponent(taskId)}/instances`, { params: query })
+}
+
 export function retryOpenTaskDispatch (taskId, params = {}) {
   const query = removeEmptyParams({
     scanPhase: params.scanPhase != null ? params.scanPhase : 1,

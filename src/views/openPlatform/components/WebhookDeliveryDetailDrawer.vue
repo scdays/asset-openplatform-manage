@@ -22,8 +22,10 @@
               <span v-else>-</span>
             </span></div>
             <template v-if="detail.eventType === 'EXPORT_READY' || detail.eventType === 'ARTIFACT_READY'">
-              <div class="kv-row"><span class="k">exportId</span><span class="v"><code>{{ detail.exportId || '-' }}</code></span></div>
-              <div class="kv-row"><span class="k">外发格式</span><span class="v">{{ detail.exportFormat || '-' }}</span></div>
+              <div v-if="detail.eventType === 'ARTIFACT_READY'" class="kv-row"><span class="k">artifactId</span><span class="v"><code>{{ detail.artifactId || '-' }}</code></span></div>
+              <div v-if="detail.eventType === 'ARTIFACT_READY'" class="kv-row"><span class="k">产物格式</span><span class="v">{{ detail.artifactFormat || '-' }}</span></div>
+              <div v-if="detail.exportId" class="kv-row"><span class="k">exportId</span><span class="v"><code>{{ detail.exportId }}</code></span></div>
+              <div v-if="detail.exportFormat" class="kv-row"><span class="k">外发格式</span><span class="v">{{ detail.exportFormat }}</span></div>
               <div class="kv-row"><span class="k">外发阶段</span><span class="v">{{ detail.exportStage || '-' }}</span></div>
               <div class="kv-row"><span class="k">Partner downloadUrl</span><span class="v"><code>{{ detail.partnerDownloadUrl || '-' }}</code></span></div>
             </template>

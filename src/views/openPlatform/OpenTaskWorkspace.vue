@@ -274,9 +274,9 @@
                 <a-descriptions-item label="scanTemplateId">{{ workspace.task.scanTemplateId }}</a-descriptions-item>
                 <a-descriptions-item label="taskPhase">{{ workspace.task.taskPhase }}</a-descriptions-item>
               </a-descriptions>
-              <div class="section-label" style="margin-top: 16px;">实例状态分布</div>
+              <div class="section-label" style="margin-top: 16px;">实例状态分布（当前 sub）</div>
               <div class="stat-row">
-                <div v-for="(count, stat) in workspace.instanceStatCounts || {}" :key="stat" class="stat-item">
+                <div v-for="(count, stat) in instanceStatCounts || {}" :key="stat" class="stat-item">
                   <div class="num">{{ count }}</div>
                   <div class="lbl">stat={{ stat }}</div>
                 </div>
@@ -284,14 +284,60 @@
             </a-tab-pane>
 
             <a-tab-pane key="lifecycle" tab="漏洞实例">
+              <div class="survey-toolbar">
+                <a-select
+                  v-model="instanceSubId"
+                  placeholder="选择排查 sub"
+                  style="width: 280px; margin-right: 8px;"
+                  allow-clear
+                  @change="loadTaskInstances"
+                >
+                  <a-select-option
+                    v-for="sub in workspace.surveySubs || []"
+                    :key="sub.subId"
+                    :value="sub.subId"
+                  >
+                    {{ sub.scannerLabel }} · {{ sub.status }} · {{ sub.subId }}
+                  </a-select-option>
+                </a-select>
+                <a-button :loading="instanceLoading" @click="loadTaskInstances">刷新</a-button>
+                <span class="api-hint">按 taskId+subId 查询快照实例</span>
+              </div>
+              <a-alert
+                v-if="instanceScope && instanceScope.hint"
+                type="info"
+                show-icon
+                :message="instanceScope.hint"
+                style="margin: 12px 0;"
+              />
               <a-table
+                class="instance-table"
                 size="small"
                 row-key="vulInfoId"
+                :scroll="{ x: 1580 }"
                 :columns="instanceColumns"
-                :data-source="workspace.instances || []"
-                :pagination="false"
+                :data-source="instanceRows"
+                :loading="instanceLoading"
+                :pagination="instanceTablePagination"
               >
-                <span slot="vulInfoStat" slot-scope="text">{{ text }}</span>
+                <span slot="vulInfoId" slot-scope="text">
+                  <code v-if="formatInstanceCell(text)" class="cell-wrap">{{ formatInstanceCell(text) }}</code>
+                  <span v-else class="muted">-</span>
+                </span>
+                <span slot="orgVulId" slot-scope="text">
+                  <a-tooltip v-if="formatInstanceCell(text)" :title="formatInstanceCell(text)">
+                    <code class="cell-ellipsis">{{ formatInstanceCell(text) }}</code>
+                  </a-tooltip>
+                  <span v-else class="muted">-</span>
+                </span>
+                <span slot="level" slot-scope="text">
+                  <enum-tag v-if="text != null && text !== ''" type="vulLevel" :value="Number(text)" with-code />
+                  <span v-else class="muted">-</span>
+                </span>
+                <span slot="vulInfoStat" slot-scope="text">
+                  <enum-tag v-if="text != null && text !== ''" type="vulInfoStat" :value="Number(text)" with-code />
+                  <span v-else class="muted">-</span>
+                </span>
               </a-table>
             </a-tab-pane>
 
@@ -312,16 +358,26 @@
                 </span>
                 <span slot="action" slot-scope="text, record">
                   <a-button
+                    v-if="canDownloadArtifactDelivery(record)"
+                    type="link"
+                    size="small"
+                    :loading="downloadingArtifactId === record.id"
+                    @click="handleDownloadArtifact(record)"
+                  >
+                    <a-icon type="download" />
+                    下载产物
+                  </a-button>
+                  <a-button
                     v-if="canDownloadExportDelivery(record)"
                     type="link"
                     size="small"
-                    :loading="downloadingId === record.id"
+                    :loading="downloadingExportId === record.id"
                     @click="handleDownloadExport(record)"
                   >
                     <a-icon type="download" />
                     下载外发
                   </a-button>
-                  <span v-else class="muted">-</span>
+                  <span v-if="!canDownloadArtifactDelivery(record) && !canDownloadExportDelivery(record)" class="muted">-</span>
                 </span>
               </a-table>
             </a-tab-pane>
@@ -334,10 +390,12 @@
 
 <script>
 import EnumTag from '@/components/openPlatform/EnumTag'
-import { getOpenTaskWorkspace, getOpenTaskSurveyResults, retryOpenTaskDispatch, refetchOpenTaskSurveyResults, refetchOpenTaskSubReport } from '@/api/openPlatform/openTask'
+import { getOpenTaskWorkspace, getOpenTaskInstances, getOpenTaskSurveyResults, retryOpenTaskDispatch, refetchOpenTaskSurveyResults, refetchOpenTaskSubReport } from '@/api/openPlatform/openTask'
 import {
   canDownloadExportDelivery as canDownloadExport,
-  triggerExportDownload
+  canDownloadArtifactDelivery as canDownloadArtifact,
+  triggerExportDownload,
+  triggerArtifactDownload
 } from '@/utils/webhookExport'
 
 const SubTaskTable = {
@@ -471,13 +529,22 @@ const SubTaskTable = {
 }
 
 const instanceColumns = [
-  { title: 'vulInfoId', dataIndex: 'vulInfoId', customRender: t => t },
-  { title: '资产', dataIndex: 'address' },
+  { title: 'vulInfoId', dataIndex: 'vulInfoId', scopedSlots: { customRender: 'vulInfoId' }, width: 360, fixed: 'left' },
+  { title: 'CVE', dataIndex: 'orgVulId', scopedSlots: { customRender: 'orgVulId' }, width: 180, ellipsis: true },
+  { title: '资产', dataIndex: 'address', width: 130, ellipsis: true },
   { title: '端口', dataIndex: 'port', width: 72 },
-  { title: '漏洞', dataIndex: 'vulnName', ellipsis: true },
-  { title: '等级', dataIndex: 'level', width: 64 },
-  { title: 'vulInfoStat', dataIndex: 'vulInfoStat', scopedSlots: { customRender: 'vulInfoStat' }, width: 90 }
+  { title: '漏洞', dataIndex: 'vulnName', width: 220, ellipsis: true },
+  { title: '等级', dataIndex: 'level', scopedSlots: { customRender: 'level' }, width: 100 },
+  { title: 'subId', dataIndex: 'subId', width: 160, ellipsis: true },
+  { title: '状态', dataIndex: 'vulInfoStat', scopedSlots: { customRender: 'vulInfoStat' }, width: 120 }
 ]
+
+const instanceTablePagination = {
+  pageSize: 20,
+  showSizeChanger: true,
+  pageSizeOptions: ['10', '20', '50', '100'],
+  showTotal: total => `共 ${total} 条`
+}
 
 const webhookColumns = [
   { title: 'deliveryId', dataIndex: 'id', ellipsis: true },
@@ -486,7 +553,7 @@ const webhookColumns = [
   { title: 'httpStatus', dataIndex: 'httpStatus', width: 90 },
   { title: '投递次数', dataIndex: 'attemptCount', width: 88, customRender: text => (text == null || text <= 1 ? '1' : String(text)) },
   { title: 'createdAt', dataIndex: 'createdAt', width: 170 },
-  { title: '操作', scopedSlots: { customRender: 'action' }, width: 120, fixed: 'right' }
+  { title: '操作', scopedSlots: { customRender: 'action' }, width: 180, fixed: 'right' }
 ]
 
 const surveyCell = (text) => (text === undefined || text === null || text === '' ? '-' : String(text))
@@ -567,6 +634,7 @@ export default {
       workspace: null,
       activeTab: 'overview',
       instanceColumns,
+      instanceTablePagination,
       webhookColumns,
       liveColumns,
       portColumns,
@@ -581,10 +649,14 @@ export default {
       surveyLoading: false,
       surveyResults: null,
       surveySubId: undefined,
+      instanceSubId: undefined,
+      instanceScope: null,
+      instanceLoading: false,
       retryLoading: false,
       refetchLoadingSubId: '',
       reportLoadingSubId: '',
-      downloadingId: null
+      downloadingExportId: null,
+      downloadingArtifactId: null
     }
   },
   computed: {
@@ -629,6 +701,18 @@ export default {
         rows.push({ address: ip, alive: false })
       })
       return rows
+    },
+    instanceRows () {
+      if (this.instanceScope && this.instanceScope.instances) {
+        return this.instanceScope.instances
+      }
+      return (this.workspace && this.workspace.instances) || []
+    },
+    instanceStatCounts () {
+      if (this.instanceScope && this.instanceScope.instanceStatCounts) {
+        return this.instanceScope.instanceStatCounts
+      }
+      return (this.workspace && this.workspace.instanceStatCounts) || {}
     },
     portDetailRows () {
       if (!this.surveyResults) return []
@@ -690,17 +774,36 @@ export default {
     }
   },
   methods: {
+    formatInstanceCell (value) {
+      if (value === undefined || value === null || value === '') return ''
+      if (Array.isArray(value)) return value.filter(v => v != null && v !== '').join(', ')
+      if (typeof value === 'object') return JSON.stringify(value)
+      return String(value)
+    },
     canDownloadExportDelivery (record) {
       return canDownloadExport(this.withPartnerContext(record))
     },
+    canDownloadArtifactDelivery (record) {
+      return canDownloadArtifact(this.withPartnerContext(record))
+    },
     handleDownloadExport (record) {
       const row = this.withPartnerContext(record)
-      if (!canDownloadExport(row) || this.downloadingId != null) return
-      this.downloadingId = record.id
+      if (!canDownloadExport(row) || this.downloadingExportId != null) return
+      this.downloadingExportId = record.id
       triggerExportDownload(row).catch(err => {
         this.$message.error((err && err.message) || '下载外发文件失败')
       }).finally(() => {
-        this.downloadingId = null
+        this.downloadingExportId = null
+      })
+    },
+    handleDownloadArtifact (record) {
+      const row = this.withPartnerContext(record)
+      if (!canDownloadArtifact(row) || this.downloadingArtifactId != null) return
+      this.downloadingArtifactId = record.id
+      triggerArtifactDownload(row).catch(err => {
+        this.$message.error((err && err.message) || '下载报告产物失败')
+      }).finally(() => {
+        this.downloadingArtifactId = null
       })
     },
     withPartnerContext (record) {
@@ -710,6 +813,18 @@ export default {
       return partnerId ? { ...record, partnerId } : record
     },
     onTabChange (tabKey) {
+      this.activeTab = tabKey
+      if (tabKey === 'surveyResults') {
+        this.loadSurveyResults()
+      } else if (tabKey === 'lifecycle') {
+        if (!this.instanceSubId) {
+          const subs = (this.workspace && this.workspace.surveySubs) || []
+          if (subs.length) {
+            this.instanceSubId = this.surveySubId || subs[0].subId
+          }
+        }
+        this.loadTaskInstances()
+      }
       this.refreshWorkspaceData(tabKey)
     },
     handleRefreshClick () {
@@ -732,12 +847,17 @@ export default {
           const subs = (data && data.surveySubs) || []
           if (prevSurveySubId && subs.some(s => s.subId === prevSurveySubId)) {
             this.surveySubId = prevSurveySubId
+            this.instanceSubId = prevSurveySubId
           } else if (subs.length) {
             this.surveySubId = subs[0].subId
+            this.instanceSubId = subs[0].subId
           }
           this.markRefreshed()
           if (activeTab === 'surveyResults') {
             return this.loadSurveyResults({ keepLoading: true })
+          }
+          if (activeTab === 'lifecycle') {
+            return this.loadTaskInstances({ keepLoading: true })
           }
         })
         .catch(err => {
@@ -753,14 +873,20 @@ export default {
       this.loading = true
       this.surveyResults = null
       this.surveySubId = undefined
+      this.instanceScope = null
+      this.instanceSubId = undefined
       getOpenTaskWorkspace(taskId)
         .then(data => {
           this.workspace = data
           const subs = (data && data.surveySubs) || []
           if (subs.length) {
             this.surveySubId = subs[0].subId
+            this.instanceSubId = subs[0].subId
           }
           this.markRefreshed()
+          if (this.activeTab === 'lifecycle') {
+            this.loadTaskInstances()
+          }
         })
         .catch(err => {
           this.$message.error((err && err.message) || '加载工作台失败')
@@ -781,6 +907,32 @@ export default {
         .finally(() => {
           if (!options.keepLoading) {
             this.surveyLoading = false
+          }
+        })
+    },
+    loadTaskInstances (options = {}) {
+      const taskId = this.$route.params.taskId
+      if (!taskId) return Promise.resolve()
+      if (!this.instanceSubId) {
+        const subs = (this.workspace && this.workspace.surveySubs) || []
+        if (subs.length) {
+          this.instanceSubId = subs[0].subId
+        } else {
+          this.instanceScope = { hint: '暂无排查子任务' }
+          return Promise.resolve()
+        }
+      }
+      if (!options.keepLoading) {
+        this.instanceLoading = true
+      }
+      return getOpenTaskInstances(taskId, { scanPhase: 1, subId: this.instanceSubId })
+        .then(data => { this.instanceScope = data })
+        .catch(err => {
+          this.$message.error((err && err.message) || '加载漏洞实例失败')
+        })
+        .finally(() => {
+          if (!options.keepLoading) {
+            this.instanceLoading = false
           }
         })
     },
@@ -1015,6 +1167,35 @@ export default {
 }
 .muted {
   color: rgba(0, 0, 0, 0.25);
+}
+.cell-ellipsis {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cell-wrap {
+  display: block;
+  max-width: 100%;
+  white-space: normal;
+  word-break: break-all;
+  line-height: 1.4;
+}
+
+.open-task-workspace-page :deep(.instance-table .ant-table-tbody > tr > td),
+.open-task-workspace-page :deep(.instance-table .ant-table-thead > tr > th) {
+  overflow: visible;
+  white-space: normal;
+}
+
+.open-task-workspace-page :deep(.ant-table table) {
+  table-layout: fixed;
+}
+
+.open-task-workspace-page :deep(.ant-table-tbody > tr > td),
+.open-task-workspace-page :deep(.ant-table-thead > tr > th) {
+  overflow: hidden;
 }
 </style>
 
