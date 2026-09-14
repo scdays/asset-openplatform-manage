@@ -83,7 +83,7 @@
         ref="table"
         size="default"
         row-key="caseId"
-        :columns="columns"
+        :columns="displayColumns"
         :data="loadData"
         :alert="false"
         :pagination="pagination"
@@ -140,6 +140,7 @@ import { STable } from '@/components'
 import EnumTag from '@/components/openPlatform/EnumTag'
 import { labelWithCode, optionsOf } from '@/constants/openPlatformDisplay'
 import { listOperationCases, backfillOperationCases } from '@/api/openPlatform/operationCase'
+import columnFreeze from '@/mixins/columnFreeze'
 
 const columns = [
   { title: 'caseId', dataIndex: 'caseId', scopedSlots: { customRender: 'caseId' }, width: 150, fixed: 'left' },
@@ -156,6 +157,7 @@ const columns = [
 export default {
   name: 'OperationCaseList',
   components: { STable, EnumTag },
+  mixins: [columnFreeze],
   data () {
     return {
       columns,

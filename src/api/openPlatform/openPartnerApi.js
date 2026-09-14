@@ -1,28 +1,9 @@
 import openApiRequest from '@/utils/openApiRequest'
 import openPartnerRequest, { setPartnerSession } from '@/utils/openPartnerRequest'
 
-export const E2E_CAPABILITIES = [
-  'TASK_READ', 'TASK_WRITE',
-  'INSTANCE_READ', 'INSTANCE_VERIFY', 'INSTANCE_REMEDIATE',
-  'INSTANCE_VERIFY_FIX', 'INSTANCE_ARCHIVE', 'EXPORT_READ', 'ARTIFACT_READ', 'EVENT_SUBSCRIBE'
-]
-
+// health 保留 open-api-service：e2e 后续业务面（mock/外发）仍由 open-api-service + partner-gateway 承载
 export function checkHealth () {
   return openApiRequest.get('/internal/health', { silent: true })
-}
-
-export function createE2ePartner (partnerId, partnerName) {
-  return openApiRequest.post('/internal/admin/partners', {
-    partnerId,
-    partnerName: partnerName || `E2E Manual ${partnerId}`,
-    partnerType: 'SIEM',
-    capabilities: E2E_CAPABILITIES,
-    rateLimitQps: 100
-  })
-}
-
-export function createE2eCredential (partnerId) {
-  return openApiRequest.post(`/internal/admin/partners/${encodeURIComponent(partnerId)}/credentials`)
 }
 
 export function fetchOAuthToken (clientId, clientSecret) {

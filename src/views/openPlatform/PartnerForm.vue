@@ -72,10 +72,7 @@
               </a-checkbox>
             </a-checkbox-group>
             <div class="field-helper">
-              控制 downloadExport 允许下载的 open_export.export_stage。
-              报告产物请授予 ARTIFACT_READ 后走 /artifacts/*；
-              「外发就绪 EXPORT_READY」对应任务完成/验证/修复核验结构化外发阶段。
-              不勾选则继承全局默认（三类结构化外发）。
+              按事件类型控制可下载：勾选 EXPORT_READY 允许下载外发，勾选 ARTIFACT_READY 允许下载产物；不勾选则继承全局默认。
             </div>
           </a-form-model-item>
           <a-form-model-item label="capabilities" prop="capabilities">
@@ -105,7 +102,7 @@ export default {
     return {
       partnerTypes: PARTNER_TYPES,
       partnerStatusOptions: optionsOf('partnerStatus'),
-      exportStageOptions: optionsOf('exportStage'),
+      exportStageOptions: optionsOf('exportType'),
       loading: false,
       submitting: false,
       form: {

@@ -69,10 +69,11 @@
         ref="table"
         size="default"
         row-key="id"
-        :columns="columns"
+        :columns="displayColumns"
         :data="loadData"
         :alert="false"
         :pagination="pagination"
+        :scroll="{ x: 1400 }"
         show-pagination="auto"
       >
         <span slot="serial" slot-scope="text, record, index">{{ index + 1 }}</span>
@@ -124,6 +125,7 @@ import { formatHttpStatus, httpStatusColor, labelOf, optionsOf } from '@/constan
 import { listWebhookDeliveries, retryWebhookDelivery } from '@/api/openPlatform/invocation'
 import { resolveInvocationLinkQuery } from '@/utils/openPlatformLink'
 import WebhookDeliveryDetailDrawer from './components/WebhookDeliveryDetailDrawer'
+import columnFreeze from '@/mixins/columnFreeze'
 
 const columns = [
   { title: '序号', scopedSlots: { customRender: 'serial' }, width: 60 },
@@ -142,6 +144,7 @@ const columns = [
 export default {
   name: 'WebhookDeliveryList',
   components: { STable, EnumTag, WebhookDeliveryDetailDrawer },
+  mixins: [columnFreeze],
   data () {
     return {
       columns,

@@ -82,10 +82,11 @@
         ref="table"
         size="default"
         row-key="taskId"
-        :columns="columns"
+        :columns="displayColumns"
         :data="loadData"
         :alert="false"
         :pagination="pagination"
+        :scroll="{ x: 1600 }"
         show-pagination="auto"
       >
         <span slot="taskId" slot-scope="text">
@@ -136,6 +137,7 @@ import { STable } from '@/components'
 import EnumTag from '@/components/openPlatform/EnumTag'
 import { optionsOf } from '@/constants/openPlatformDisplay'
 import { listOpenTasks, retryOpenTaskDispatch } from '@/api/openPlatform/openTask'
+import columnFreeze from '@/mixins/columnFreeze'
 
 const columns = [
   { title: 'taskId', dataIndex: 'taskId', scopedSlots: { customRender: 'taskId' }, width: 140 },
@@ -157,6 +159,7 @@ const columns = [
 export default {
   name: 'OpenTaskList',
   components: { STable, EnumTag },
+  mixins: [columnFreeze],
   data () {
     return {
       columns,

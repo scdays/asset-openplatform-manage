@@ -76,10 +76,11 @@
         ref="table"
         size="default"
         row-key="invocationId"
-        :columns="columns"
+        :columns="displayColumns"
         :data="loadData"
         :alert="false"
         :pagination="pagination"
+        :scroll="{ x: 1500 }"
         show-pagination="auto"
       >
         <span slot="serial" slot-scope="text, record, index">{{ index + 1 }}</span>
@@ -126,6 +127,7 @@ import ResponseCodeTag from '@/components/openPlatform/ResponseCodeTag'
 import { optionsOf } from '@/constants/openPlatformDisplay'
 import { listInvocations } from '@/api/openPlatform/invocation'
 import InvocationPreviewDrawer from './components/InvocationPreviewDrawer'
+import columnFreeze from '@/mixins/columnFreeze'
 
 const columns = [
   { title: '序号', scopedSlots: { customRender: 'serial' }, width: 60 },
@@ -162,6 +164,7 @@ function buildQueryParamFromRoute (route) {
 export default {
   name: 'InvocationList',
   components: { STable, EnumTag, ResponseCodeTag, InvocationPreviewDrawer },
+  mixins: [columnFreeze],
   data () {
     return {
       columns,

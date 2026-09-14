@@ -76,11 +76,10 @@ export const WEBHOOK_EVENT_TYPES = [
   { value: 'ARTIFACT_READY', label: '报告产物就绪', color: 'gold' }
 ]
 
-/** 外发阶段 exportStage（与后端 ExportStage 常量对齐，控制哪些产物可下载） */
-export const EXPORT_STAGES = [
-  { value: 'TASK_COMPLETED', label: '任务完成外发包', color: 'blue' },
-  { value: 'VERIFY_SCAN', label: '验证扫描外发', color: 'cyan' },
-  { value: 'VERIFY_FIX_SCAN', label: '修复核验扫描外发', color: 'purple' }
+/** 外发类型 exportType（按事件类型控制可下载；与 partner_webhook_config.downloadable_stages 存值对齐） */
+export const EXPORT_TYPES = [
+  { value: 'EXPORT_READY', label: '外发就绪', color: 'gold' },
+  { value: 'ARTIFACT_READY', label: '报告产物就绪', color: 'gold' }
 ]
 
 export const OPEN_TASK_STATUSES = [
@@ -189,7 +188,7 @@ const REGISTRY = {
   capability: buildMap(CAPABILITIES),
   webhookDeliveryStatus: buildMap(WEBHOOK_DELIVERY_STATUSES),
   webhookEventType: buildMap(WEBHOOK_EVENT_TYPES),
-  exportStage: buildMap(EXPORT_STAGES),
+  exportType: buildMap(EXPORT_TYPES),
   openTaskStatus: buildMap(OPEN_TASK_STATUSES),
   operationCaseType: buildMap(OPERATION_CASE_TYPES),
   primaryResourceType: buildMap(PRIMARY_RESOURCE_TYPES),
@@ -211,7 +210,7 @@ const OPTIONS_REGISTRY = {
   capability: CAPABILITIES,
   webhookDeliveryStatus: WEBHOOK_DELIVERY_STATUSES,
   webhookEventType: WEBHOOK_EVENT_TYPES,
-  exportStage: EXPORT_STAGES,
+  exportType: EXPORT_TYPES,
   openTaskStatus: OPEN_TASK_STATUSES,
   operationCaseType: OPERATION_CASE_TYPES,
   primaryResourceType: PRIMARY_RESOURCE_TYPES,

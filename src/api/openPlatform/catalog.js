@@ -1,4 +1,4 @@
-import openApiRequest from '@/utils/openApiRequest'
+import platformAdminRequest from '@/utils/platformAdminRequest'
 
 const API_OPERATION_PREFIX = '/internal/admin/api-operations'
 const DOC_PREFIX = '/internal/admin/developer-docs'
@@ -86,7 +86,7 @@ function parseDocList (raw) {
 function buildCatalogFallback (params) {
   const page = params.page || params.pageNo || 1
   const size = params.size || params.pageSize || 10
-  return openApiRequest.get(INVOCATION_PREFIX, {
+  return platformAdminRequest.get(INVOCATION_PREFIX, {
     params: { page: 1, size: 200 },
     silent: true
   }).then(data => {
@@ -137,7 +137,7 @@ export function listApiCatalogOperations (params = {}) {
     keyword: params.keyword,
     domain: params.domain
   })
-  return openApiRequest.get(API_OPERATION_PREFIX, {
+  return platformAdminRequest.get(API_OPERATION_PREFIX, {
     params: query,
     silent: true
   }).then(data => {
@@ -150,7 +150,7 @@ export function listApiCatalogOperations (params = {}) {
 }
 
 export function listDeveloperDocs () {
-  return openApiRequest.get(DOC_PREFIX, {
+  return platformAdminRequest.get(DOC_PREFIX, {
     params: { page: 1, size: 50 },
     silent: true
   }).then(data => {

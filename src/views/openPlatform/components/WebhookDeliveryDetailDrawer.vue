@@ -21,14 +21,6 @@
               </template>
               <span v-else>-</span>
             </span></div>
-            <template v-if="detail.eventType === 'EXPORT_READY' || detail.eventType === 'ARTIFACT_READY'">
-              <div v-if="detail.eventType === 'ARTIFACT_READY'" class="kv-row"><span class="k">artifactId</span><span class="v"><code>{{ detail.artifactId || '-' }}</code></span></div>
-              <div v-if="detail.eventType === 'ARTIFACT_READY'" class="kv-row"><span class="k">产物格式</span><span class="v">{{ detail.artifactFormat || '-' }}</span></div>
-              <div v-if="detail.exportId" class="kv-row"><span class="k">exportId</span><span class="v"><code>{{ detail.exportId }}</code></span></div>
-              <div v-if="detail.exportFormat" class="kv-row"><span class="k">外发格式</span><span class="v">{{ detail.exportFormat }}</span></div>
-              <div class="kv-row"><span class="k">外发阶段</span><span class="v">{{ detail.exportStage || '-' }}</span></div>
-              <div class="kv-row"><span class="k">Partner downloadUrl</span><span class="v"><code>{{ detail.partnerDownloadUrl || '-' }}</code></span></div>
-            </template>
             <div class="kv-row"><span class="k">callbackUrl</span><span class="v">{{ detail.callbackUrl }}</span></div>
             <div class="kv-row"><span class="k">HTTP</span><span class="v"><a-tag :color="httpStatusColor(detail.httpStatus)">{{ formatHttpStatus(detail.httpStatus) }}</a-tag></span></div>
             <div class="kv-row"><span class="k">状态</span><span class="v"><enum-tag type="webhookDeliveryStatus" :value="detail.status" /></span></div>
@@ -37,10 +29,10 @@
           </a-tab-pane>
           <a-tab-pane key="payload" tab="投递报文">
             <div class="payload-toolbar">
-              <span class="helper">POST JSON 含 eventId / eventType / payload</span>
-              <a-button size="small" @click="copyText(detail.payloadJsonFormatted || detail.payloadJson, '事件 JSON')">复制事件 JSON</a-button>
-            </div>
-            <pre class="code-block">{{ detail.payloadJsonFormatted || detail.payloadJson || '-' }}</pre>
+             <span class="helper">POST JSON 含 eventId / eventType / payload</span>
+              <a-button size="small" @click="copyText(displayPayload, '事件 JSON')">复制事件 JSON</a-button>
+           </div>
+            <pre class="code-block">{{ displayPayload || '-' }}</pre>
           </a-tab-pane>
           <a-tab-pane key="retries" tab="重试历史">
             <p class="helper">按 eventId 聚合同一次 Webhook 的首次投递 / 自动重试 / 手动重试</p>
@@ -148,9 +140,14 @@ export default {
         return `Webhook 投递详情 · ${labelOf('webhookEventType', this.detail.eventType)}`
       }
       return 'Webhook 投递详情'
-    },
+   },
     canRetry () {
       return this.detail && this.detail.status === 'FAILED'
+    },
+    displayPayload () {
+      if (!this.detail) return ''
+      const source = this.detail.payloadJsonFormatted || this.detail.payloadJson || ''
+      return this.prettyPrintJson(source)
     }
   },
   watch: {
@@ -225,11 +222,48 @@ export default {
       }
       return `${count} 次（含自动/手动重试）`
     },
-    formatDateTime (value) {
-      if (!value) return '-'
-      return this.$moment ? this.$moment(value).format('YYYY-MM-DD HH:mm:ss') : value
+   formatDateTime (value) {
+     if (!value) return '-'
+     return this.$moment ? this.$moment(value).format('YYYY-MM-DD HH:mm:ss') : value
+   },
+    prettyPrintJson (raw) {
+      if (!raw) return ''
+      // 递归展开值为 JSON 字符串的字段：envelope.payload 经 EventBus 编解码后常为转义字符串，
+      // 仅做整体 pretty-print 时该字段仍是一行转义串，展开后才能层级可读。
+      const unwrap = (v) => {
+        if (typeof v === 'string') {
+          const t = v.trim()
+          if ((t.startsWith('{') && t.endsWith('}')) || (t.startsWith('[') && t.endsWith(']'))) {
+            try {
+              return unwrap(JSON.parse(t))
+            } catch (e) {
+              return v
+            }
+          }
+          return v
+        }
+        if (Array.isArray(v)) {
+          return v.map(unwrap)
+        }
+        if (v && typeof v === 'object') {
+          const out = {}
+          Object.keys(v).forEach(k => { out[k] = unwrap(v[k]) })
+          return out
+        }
+        return v
+      }
+      try {
+        let parsed = JSON.parse(raw)
+        // 双重编码：整体仍是字符串则再解一次
+        if (typeof parsed === 'string') {
+          try { parsed = JSON.parse(parsed) } catch (e) { return raw }
+        }
+        return JSON.stringify(unwrap(parsed), null, 2)
+      } catch (e) {
+        return raw
+      }
     },
-    copyText (text, label) {
+   copyText (text, label) {
       if (!text) {
         this.$message.warning('暂无内容可复制')
         return

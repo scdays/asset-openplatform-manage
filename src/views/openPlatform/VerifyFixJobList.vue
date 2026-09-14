@@ -57,10 +57,11 @@
       <a-table
         size="default"
         row-key="jobId"
-        :columns="columns"
+        :columns="displayColumns"
         :data-source="rows"
         :loading="loading"
         :pagination="pagination"
+        :scroll="{ x: 1200 }"
       >
         <span slot="jobId" slot-scope="text">
           <code>{{ text }}</code>
@@ -95,6 +96,7 @@
 
 <script>
 import { listVerifyFixJobs, retryVerifyFixDispatch } from '@/api/openPlatform/verifyFix'
+import columnFreeze from '@/mixins/columnFreeze'
 
 const columns = [
   { title: 'jobId', dataIndex: 'jobId', scopedSlots: { customRender: 'jobId' }, width: 140 },
@@ -111,6 +113,7 @@ const columns = [
 
 export default {
   name: 'VerifyFixJobList',
+  mixins: [columnFreeze],
   data () {
     return {
       columns,

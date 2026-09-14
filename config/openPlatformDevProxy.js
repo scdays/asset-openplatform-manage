@@ -3,6 +3,10 @@ module.exports = function createOpenPlatformDevProxy () {
   const platformGateway = process.env.VUE_APP_GATEWAY_PROXY_TARGET || 'http://172.16.3.32:7000'
   const partnerGateway = process.env.VUE_APP_PARTNER_GATEWAY_PROXY_TARGET || 'http://172.16.3.32:35770'
   return {
+    '/platform-admin': {
+      target: platformGateway,
+      changeOrigin: true
+    },
     '/open-api-service': {
       target: platformGateway,
       changeOrigin: true

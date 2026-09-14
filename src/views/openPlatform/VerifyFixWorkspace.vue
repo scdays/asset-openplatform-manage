@@ -300,25 +300,15 @@
               </a-spin>
             </a-tab-pane>
 
-            <a-tab-pane key="exports" tab="外发">
-              <div class="section-label">VERIFY_FIX_SCAN 外发</div>
+            <a-tab-pane key="pushRecords" tab="推送记录">
               <a-table
                 size="small"
-                row-key="exportId"
-                :columns="exportColumns"
-                :data-source="workspace.exports || []"
-                :pagination="false"
-              />
-            </a-tab-pane>
-
-            <a-tab-pane key="callback" tab="Partner 回调">
-              <a-table
-                size="small"
-                row-key="id"
+                :row-key="pushRecordRowKey"
                 :scroll="{ x: 960 }"
-                :columns="webhookColumns"
-                :data-source="workspace.webhookDeliveries || []"
+                :columns="pushRecordColumns"
+                :data-source="pushRecords || []"
                 :pagination="false"
+                :loading="pushRecordsLoading"
               >
                 <span slot="eventType" slot-scope="text">
                   <enum-tag type="webhookEventType" :value="text" />
@@ -328,26 +318,26 @@
                 </span>
                 <span slot="action" slot-scope="text, record">
                   <a-button
-                    v-if="canDownloadArtifactDelivery(record)"
+                    v-if="canDownloadArtifact(record)"
                     type="link"
                     size="small"
-                    :loading="downloadingArtifactId === record.id"
+                    :loading="downloadingArtifactId === record.eventId"
                     @click="handleDownloadArtifact(record)"
                   >
                     <a-icon type="download" />
                     下载产物
                   </a-button>
                   <a-button
-                    v-if="canDownloadExportDelivery(record)"
+                    v-if="canDownloadExport(record)"
                     type="link"
                     size="small"
-                    :loading="downloadingExportId === record.id"
+                    :loading="downloadingExportId === record.eventId"
                     @click="handleDownloadExport(record)"
                   >
                     <a-icon type="download" />
                     下载外发
                   </a-button>
-                  <span v-if="!canDownloadArtifactDelivery(record) && !canDownloadExportDelivery(record)" class="muted">-</span>
+                  <span v-if="!canDownloadArtifact(record) && !canDownloadExport(record)" class="muted">-</span>
                 </span>
               </a-table>
             </a-tab-pane>
@@ -419,11 +409,12 @@ import {
 } from '@/api/openPlatform/mockVerifyFix'
 import { checkHealth } from '@/api/openPlatform/openPartnerApi'
 import {
-  canDownloadExportDelivery as canDownloadExport,
-  canDownloadArtifactDelivery as canDownloadArtifact,
-  triggerExportDownload,
-  triggerArtifactDownload
+  canDownloadExport,
+  canDownloadArtifact,
+  triggerExportDownloadByEventId,
+  triggerArtifactDownloadByEventId
 } from '@/utils/webhookExport'
+import { listPushRecords } from '@/api/openPlatform/pushRecord'
 
 const subColumns = [
   { title: 'subId', dataIndex: 'subId', ellipsis: true },
@@ -461,21 +452,13 @@ const itemColumns = [
   { title: '项状态', dataIndex: 'itemStatus', width: 90 }
 ]
 
-const exportColumns = [
-  { title: 'exportId', dataIndex: 'exportId', ellipsis: true },
-  { title: 'taskId', dataIndex: 'taskId', width: 120 },
-  { title: 'format', dataIndex: 'format', width: 72 },
-  { title: 'status', dataIndex: 'status', width: 80 },
-  { title: 'downloadUrl', dataIndex: 'downloadUrl', ellipsis: true }
-]
-
-const webhookColumns = [
-  { title: 'deliveryId', dataIndex: 'id', ellipsis: true },
-  { title: 'eventType', dataIndex: 'eventType', scopedSlots: { customRender: 'eventType' } },
-  { title: 'status', dataIndex: 'status', scopedSlots: { customRender: 'status' } },
-  { title: 'httpStatus', dataIndex: 'httpStatus', width: 90 },
+const pushRecordColumns = [
+  { title: '事件类型', dataIndex: 'eventType', scopedSlots: { customRender: 'eventType' }, width: 160 },
+  { title: '投递状态', dataIndex: 'status', scopedSlots: { customRender: 'status' }, width: 100 },
+  { title: 'HTTP状态', dataIndex: 'httpStatus', width: 90 },
   { title: '投递次数', dataIndex: 'attemptCount', width: 88, customRender: text => (text == null || text <= 1 ? '1' : String(text)) },
-  { title: 'createdAt', dataIndex: 'createdAt', width: 170 },
+  { title: '摘要', dataIndex: 'detail.summary', ellipsis: true },
+  { title: '创建时间', dataIndex: 'createdAt', width: 170 },
   { title: '操作', scopedSlots: { customRender: 'action' }, width: 180, fixed: 'right' }
 ]
 
@@ -518,8 +501,7 @@ export default {
       subColumns,
       itemColumns,
       verifyInstanceColumns,
-      exportColumns,
-      webhookColumns,
+      pushRecordColumns,
       rescanVulnColumns,
       liveColumns,
       portColumns,
@@ -540,6 +522,8 @@ export default {
       retryingSubId: '',
       downloadingExportId: null,
       downloadingArtifactId: null,
+      pushRecords: [],
+      pushRecordsLoading: false,
       xmlFile: null,
       xmlFileName: '',
       completing: false,
@@ -655,38 +639,25 @@ export default {
     this.loadHealth()
   },
   methods: {
-    canDownloadExportDelivery (record) {
-      return canDownloadExport(this.withPartnerContext(record))
-    },
-    canDownloadArtifactDelivery (record) {
-      return canDownloadArtifact(this.withPartnerContext(record))
-    },
+    canDownloadExport,
+    canDownloadArtifact,
     handleDownloadExport (record) {
-      const row = this.withPartnerContext(record)
-      if (!canDownloadExport(row) || this.downloadingExportId != null) return
-      this.downloadingExportId = record.id
-      triggerExportDownload(row).catch(err => {
+      if (!canDownloadExport(record) || this.downloadingExportId != null) return
+      this.downloadingExportId = record.eventId
+      triggerExportDownloadByEventId(record).catch(err => {
         this.$message.error((err && err.message) || '下载外发文件失败')
       }).finally(() => {
         this.downloadingExportId = null
       })
     },
     handleDownloadArtifact (record) {
-      const row = this.withPartnerContext(record)
-      if (!canDownloadArtifact(row) || this.downloadingArtifactId != null) return
-      this.downloadingArtifactId = record.id
-      triggerArtifactDownload(row).catch(err => {
+      if (!canDownloadArtifact(record) || this.downloadingArtifactId != null) return
+      this.downloadingArtifactId = record.eventId
+      triggerArtifactDownloadByEventId(record).catch(err => {
         this.$message.error((err && err.message) || '下载报告产物失败')
       }).finally(() => {
         this.downloadingArtifactId = null
       })
-    },
-    withPartnerContext (record) {
-      if (!record) return record
-      if (record.partnerId) return record
-      const job = this.workspace && this.workspace.job
-      const partnerId = job && job.partnerId
-      return partnerId ? { ...record, partnerId } : record
     },
     scannerLabel: scannerTypeLabel,
     resetWorkspaceState () {
@@ -705,6 +676,8 @@ export default {
       } else if (tabKey === 'items') {
         this.initInstanceScopeDefaults()
         this.loadVerifyFixInstances()
+      } else if (tabKey === 'pushRecords') {
+        this.loadPushRecords()
       }
     },
     initInstanceScopeDefaults () {
@@ -840,12 +813,45 @@ export default {
           this.initInstanceScopeDefaults()
           await this.loadVerifyFixInstances()
         }
+        if (this.activeTab === 'pushRecords') {
+          this.loadPushRecords()
+        }
       } catch (e) {
         this.workspace = null
         this.$message.error(e.message || '加载工作台失败')
       } finally {
         this.loading = false
       }
+    },
+    pushRecordRowKey (record) {
+      return (record && record.eventId) || ('row-' + (record && record.id))
+    },
+    loadPushRecords () {
+      const job = this.workspace && this.workspace.job
+      if (!job || !job.partnerId || !this.jobId) {
+        return Promise.resolve()
+      }
+      this.pushRecordsLoading = true
+      const relatedTasks = (this.workspace && this.workspace.relatedTasks) || []
+      const relatedTaskIds = relatedTasks.map(t => t.taskId).filter(Boolean)
+      const params = {
+        partnerId: job.partnerId,
+        resourceType: 'VERIFY_FIX_JOB',
+        resourceId: this.jobId
+      }
+      if (relatedTaskIds.length) {
+        params.relatedTaskIds = relatedTaskIds.join(',')
+      }
+      return listPushRecords(params)
+        .then(records => {
+          this.pushRecords = (records || []).map(r => ({ ...r }))
+        })
+        .catch(err => {
+          this.$message.error((err && err.message) || '加载推送记录失败')
+        })
+        .finally(() => {
+          this.pushRecordsLoading = false
+        })
     },
     async loadSurveyResults () {
       const taskId = this.resolveSurveyTaskId()

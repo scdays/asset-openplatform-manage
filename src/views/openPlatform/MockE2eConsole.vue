@@ -21,7 +21,7 @@
       <div class="e2e-header">
         <div>
           <h2 class="e2e-title">接入测试</h2>
-          <p class="e2e-desc">模拟接入方完成 Partner 注册、Token 换取与建任务。task-center 模式下任务进入工作台后由扫描编排自动入库；后续在「处置测试」页按 Open API 执行验证、处置与修复核验。</p>
+          <p class="e2e-desc">模拟接入方完成 Token 换取与建任务。Partner 与凭证请在「合作伙伴」页预先创建；task-center 模式下任务进入工作台后由扫描编排自动入库；后续在「处置测试」页按 Open API 执行验证、处置与修复核验。</p>
         </div>
         <div class="e2e-header-actions">
           <a-button :loading="running" type="primary" icon="play-circle" @click="runFullFlow">
@@ -33,7 +33,7 @@
 
       <a-steps :current="currentStep" size="small" class="e2e-steps">
         <a-step title="环境" />
-        <a-step title="接入方" />
+        <a-step title="绑定会话" />
         <a-step title="Token" />
         <a-step title="建任务" />
       </a-steps>
@@ -42,62 +42,15 @@
     <a-row :gutter="16">
       <a-col :xs="24" :xl="10">
         <a-card title="接入方" :bordered="false" class="e2e-section-card" style="margin-top: 0;">
-          <a-form-item label="接入方来源" class="e2e-partner-mode">
-            <a-radio-group v-model="partnerMode" :disabled="running">
-              <a-radio value="existing">选用已有（不创建）</a-radio>
-              <a-radio value="create">临时新建 e2e-</a-radio>
-            </a-radio-group>
-          </a-form-item>
-
           <partner-session-panel
-            v-if="partnerMode === 'existing'"
             ref="partnerSession"
             :initial-partner-id="initialPartnerId"
             hint-title="选用合作伙伴中的接入方"
-            hint-desc="选择 partnerId 并绑定 Token。绑定信息仅保存在当前浏览器会话，点「清除会话」可完全清空。"
+            hint-desc="Partner 与凭证请在「合作伙伴」页创建后，此处选用并绑定 Token。绑定信息仅保存在当前浏览器会话，点「清除会话」可完全清空。"
             @bound="onPartnerBound"
             @cleared="onPartnerCleared"
             @partner-change="onPartnerSelect"
           />
-
-          <a-form-item v-else label="partnerId（自动前缀 e2e-）">
-            <a-input v-model="partnerSuffix" :disabled="running" placeholder="留空则使用时间戳" />
-          </a-form-item>
-
-          <a-card
-            v-if="credentialBundle"
-            type="inner"
-            title="OAuth 凭证（新建 Partner 后请立即保存）"
-            size="small"
-            class="credential-bundle-card"
-          >
-            <a-alert
-              type="error"
-              show-icon
-              message="clientSecret 仅本次展示"
-              description="请立即复制保存。关闭页面或重置后无法再次查看，需到合作方详情重新生成凭证。"
-              style="margin-bottom: 12px;"
-            />
-            <div class="credential-row">
-              <span class="credential-label">partnerId</span>
-              <code class="credential-value">{{ credentialBundle.partnerId }}</code>
-              <a-button size="small" @click="copyText(credentialBundle.partnerId, 'partnerId')">复制</a-button>
-            </div>
-            <div class="credential-row">
-              <span class="credential-label">clientId</span>
-              <code class="credential-value">{{ credentialBundle.clientId }}</code>
-              <a-button size="small" @click="copyText(credentialBundle.clientId, 'clientId')">复制</a-button>
-            </div>
-            <div class="credential-row">
-              <span class="credential-label">clientSecret</span>
-              <code class="credential-value secret">{{ credentialBundle.clientSecret }}</code>
-              <a-button size="small" type="primary" @click="copyText(credentialBundle.clientSecret, 'clientSecret')">复制</a-button>
-            </div>
-            <div class="credential-actions">
-              <a-button size="small" @click="copyCredentialBundle">复制完整接入包（JSON）</a-button>
-            </div>
-            <p class="credential-hint">步骤 3 将用上述凭证换取 accessToken，与「处置测试」页共用同一会话。</p>
-          </a-card>
 
           <a-card
             v-if="tokenRecords.length"
@@ -178,7 +131,7 @@
         <a-card title="分步执行" :bordered="false" class="e2e-section-card" style="margin-top: 16px;">
           <a-button-group class="e2e-step-buttons">
             <a-button size="small" :disabled="running" @click="runStep('health')">1 健康检查</a-button>
-            <a-button size="small" :disabled="running" @click="runStep('partner')">2 接入方</a-button>
+            <a-button size="small" :disabled="running" @click="runStep('partner')">2 绑定会话</a-button>
             <a-button size="small" :disabled="running" @click="runStep('token')">3 Token</a-button>
             <a-button size="small" :disabled="running" @click="runStep('createTask')">4 建任务</a-button>
           </a-button-group>
@@ -204,12 +157,6 @@
                 <enum-tag type="webhookDeliveryStatus" :value="mapStatus(item.status)" :fallback="item.status" />
               </div>
               <div class="timeline-msg">{{ item.message }}</div>
-              <div v-if="item.partnerId && item.clientId && item.clientSecret" class="timeline-credential">
-                <div class="timeline-cred-title">OAuth 凭证（请保存）</div>
-                <div>partnerId: <code>{{ item.partnerId }}</code></div>
-                <div>clientId: <code>{{ item.clientId }}</code></div>
-                <div>clientSecret: <code class="secret">{{ item.clientSecret }}</code></div>
-              </div>
               <div v-if="item.taskId" class="timeline-extra">taskId: <code>{{ item.taskId }}</code></div>
             </a-timeline-item>
           </a-timeline>
@@ -236,7 +183,6 @@ import {
   runCreateTaskStep,
   runHealthStep,
   runPartnerSkipStep,
-  runPartnerStep,
   runTokenSkipStep,
   runTokenStep
 } from '@/api/openPlatform/e2eRunner'
@@ -274,12 +220,9 @@ export default {
     return {
       runId,
       running: false,
-      partnerMode: 'existing',
       selectedPartnerId: '',
-      partnerSuffix: '',
       tokenColumns,
       tokenRecords: [],
-      credentialBundle: null,
       taskForm: {
         extTaskId: `EXT-E2E-${runId}`,
         taskName: 'mock-manual-task',
@@ -308,11 +251,7 @@ export default {
       return hasAdminKey()
     },
     partnerId () {
-      if (this.partnerMode === 'existing') {
-        return this.resolvePartnerId()
-      }
-      const suffix = (this.partnerSuffix || '').trim() || buildRunId()
-      return `e2e-${suffix}`
+      return this.resolvePartnerId()
     },
     initialPartnerId () {
       return (this.$route.query.partnerId || '').trim()
@@ -394,8 +333,7 @@ export default {
         paste: '粘贴',
         credential: '凭证换取',
         bound: '已绑定',
-        restored: '会话恢复',
-        create: '新建凭证'
+        restored: '会话恢复'
       }
       return map[source] || source || '-'
     },
@@ -424,39 +362,11 @@ export default {
         this.$message.success('Token 已加入记录列表')
       }
     },
-    saveCredentialBundle (result) {
-      if (!result || !result.clientSecret) return
-      const isNew = !this.credentialBundle ||
-        this.credentialBundle.clientSecret !== result.clientSecret
-      this.credentialBundle = {
-        partnerId: result.partnerId,
-        clientId: result.clientId,
-        clientSecret: result.clientSecret,
-        createdAt: this.formatTime(new Date())
-      }
-      if (isNew) {
-        this.$notification.warning({
-          message: 'Partner 已创建，请立即保存凭证',
-          description: 'clientSecret 仅本次展示，见左侧「OAuth 凭证」卡片。',
-          duration: 10
-        })
-      }
-    },
     copyText (text, label) {
       if (!text) return
       copyToClipboard(text)
         .then(() => this.$message.success(`${label || '内容'} 已复制`))
         .catch(() => this.$message.error('复制失败，请手动选中文本复制'))
-    },
-    copyCredentialBundle () {
-      if (!this.credentialBundle) return
-      const payload = {
-        partnerId: this.credentialBundle.partnerId,
-        clientId: this.credentialBundle.clientId,
-        clientSecret: this.credentialBundle.clientSecret,
-        grantType: 'client_credentials'
-      }
-      this.copyText(JSON.stringify(payload, null, 2), '接入包')
     },
     copyToken (record) {
       const text = record && record.accessToken
@@ -489,7 +399,6 @@ export default {
     buildE2eContext () {
       this.syncPanelToSession()
       return {
-        partnerMode: this.partnerMode,
         partnerId: this.effectivePartnerId,
         clientId: this.session.clientId,
         clientSecret: this.session.clientSecret,
@@ -506,7 +415,6 @@ export default {
       if (result.clientId) this.session.clientId = result.clientId
       if (result.clientSecret) {
         this.session.clientSecret = result.clientSecret
-        this.saveCredentialBundle(result)
       }
       if (result.accessToken) {
         this.session.accessToken = result.accessToken
@@ -515,7 +423,7 @@ export default {
           accessToken: result.accessToken,
           clientId: result.clientId || this.session.clientId,
           expiresIn: result.expiresIn,
-          source: result.source || (result.skipped ? 'bound' : 'create')
+          source: result.source || (result.skipped ? 'bound' : 'credential')
         }, true)
       }
       if (result.taskId) this.session.taskId = result.taskId
@@ -557,7 +465,6 @@ export default {
         tokenSource: ''
       }
       this.tokenRecords = []
-      this.credentialBundle = null
       clearAllOpenPlatformSessions()
       if (this.$refs.partnerSession) {
         this.$refs.partnerSession.boundPartnerId = ''
@@ -603,8 +510,8 @@ export default {
             result = await runHealthStep()
             break
           case 'partner':
-            if (this.partnerMode === 'existing') {
-              this.syncPanelToSession()
+            this.syncPanelToSession()
+            {
               const pid = this.resolvePartnerId()
               if (!pid) {
                 this.$message.warning('请先在上方下拉选择接入方')
@@ -615,13 +522,11 @@ export default {
                 clientId: this.session.clientId,
                 clientSecret: this.session.clientSecret
               })
-            } else {
-              result = await runPartnerStep(this.partnerId)
             }
             break
           case 'token':
-            if (this.partnerMode === 'existing') {
-              this.syncPanelToSession()
+            this.syncPanelToSession()
+            {
               const pid = this.resolvePartnerId()
               if (!pid) {
                 this.$message.warning('请先在上方下拉选择接入方')
@@ -645,16 +550,6 @@ export default {
                 this.$message.warning('请粘贴 Token，或填写 clientSecret 后点 Token；也可点「绑定会话」')
                 return
               }
-            } else {
-              if (!this.session.clientId) {
-                this.$message.warning(MSG.needPartner)
-                return
-              }
-              result = await runTokenStep(
-                this.session.clientId,
-                this.session.clientSecret,
-                this.session.partnerId || this.partnerId
-              )
             }
             break
           case 'createTask':
@@ -749,10 +644,6 @@ export default {
 
 .e2e-steps {
   margin-top: 20px;
-}
-
-.e2e-partner-mode {
-  margin-bottom: 8px;
 }
 
 .token-records-card {
@@ -851,68 +742,5 @@ export default {
 .timeline-extra {
   margin-top: 4px;
   font-size: 12px;
-}
-
-.timeline-credential {
-  margin-top: 8px;
-  padding: 8px 10px;
-  background: #fff7e6;
-  border: 1px solid #ffd591;
-  border-radius: 4px;
-  font-size: 12px;
-  line-height: 1.7;
-}
-
-.timeline-cred-title {
-  font-weight: 500;
-  margin-bottom: 4px;
-  color: rgba(0, 0, 0, 0.85);
-}
-
-.timeline-credential code.secret,
-.credential-value.secret {
-  color: #cf1322;
-  word-break: break-all;
-}
-
-.credential-bundle-card {
-  margin-top: 12px;
-}
-
-.credential-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  margin-bottom: 8px;
-  flex-wrap: wrap;
-}
-
-.credential-label {
-  min-width: 88px;
-  color: rgba(0, 0, 0, 0.45);
-  font-size: 13px;
-  line-height: 28px;
-}
-
-.credential-value {
-  flex: 1;
-  min-width: 120px;
-  font-size: 12px;
-  background: #f5f5f5;
-  border: 1px solid #e8e8e8;
-  padding: 4px 6px;
-  border-radius: 2px;
-  word-break: break-all;
-}
-
-.credential-actions {
-  margin: 8px 0;
-}
-
-.credential-hint {
-  margin: 8px 0 0;
-  font-size: 12px;
-  color: rgba(0, 0, 0, 0.45);
-  line-height: 1.6;
 }
 </style>

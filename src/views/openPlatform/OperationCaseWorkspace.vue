@@ -94,8 +94,9 @@
                 size="small"
                 row-key="invocationId"
                 :columns="invocationColumns"
-                :data-source="workspace.invocations || []"
+                :data-source="invocations || []"
                 :pagination="false"
+                :loading="invocationsLoading"
               >
                 <span slot="operationId" slot-scope="text">
                   <enum-tag v-if="text" type="apiOperation" :value="text" with-code />
@@ -111,14 +112,20 @@
               </a-table>
             </a-tab-pane>
 
-            <a-tab-pane key="webhooks" tab="Webhook">
+            <a-tab-pane key="pushRecords" tab="推送记录">
               <a-table
                 size="small"
-                row-key="id"
-                :columns="webhookColumns"
-                :data-source="workspace.webhooks || []"
+                :row-key="pushRecordRowKey"
+                :columns="pushRecordColumns"
+                :data-source="pushRecords || []"
                 :pagination="false"
-              />
+                :loading="pushRecordsLoading"
+              >
+                <span slot="eventType" slot-scope="text">
+                  <enum-tag v-if="text" type="webhookEventType" :value="text" />
+                  <span v-else>-</span>
+                </span>
+              </a-table>
             </a-tab-pane>
 
             <a-tab-pane key="stateLogs" tab="跃迁日志">
@@ -150,6 +157,8 @@
 import EnumTag from '@/components/openPlatform/EnumTag'
 import ResponseCodeTag from '@/components/openPlatform/ResponseCodeTag'
 import { getOperationCaseWorkspace, retryOperationCaseDispatch } from '@/api/openPlatform/operationCase'
+import { listInvocations } from '@/api/openPlatform/invocation'
+import { listPushRecords } from '@/api/openPlatform/pushRecord'
 import TaskScanCasePanel from './components/operationCase/TaskScanCasePanel'
 import VerifyFixCasePanel from './components/operationCase/VerifyFixCasePanel'
 import InstanceOpCasePanel from './components/operationCase/InstanceOpCasePanel'
@@ -163,11 +172,10 @@ const invocationColumns = [
   { title: '耗时 ms', dataIndex: 'latencyMs', width: 80 }
 ]
 
-const webhookColumns = [
-  { title: 'ID', dataIndex: 'id', width: 70 },
-  { title: '事件', dataIndex: 'eventType', width: 180 },
-  { title: '状态', dataIndex: 'status', width: 90 },
-  { title: 'resourceId', dataIndex: 'resourceId', ellipsis: true },
+const pushRecordColumns = [
+  { title: '事件类型', dataIndex: 'eventType', scopedSlots: { customRender: 'eventType' }, width: 160 },
+  { title: '状态', dataIndex: 'status', width: 100 },
+  { title: '摘要', dataIndex: 'detail.summary', ellipsis: true },
   { title: '时间', dataIndex: 'createdAt', width: 170 }
 ]
 
@@ -195,9 +203,13 @@ export default {
       workspace: null,
       activeTab: 'payload',
       invocationColumns,
-      webhookColumns,
+      pushRecordColumns,
       stateLogColumns,
-      retryLoading: false
+      retryLoading: false,
+      invocations: [],
+      invocationsLoading: false,
+      pushRecords: [],
+      pushRecordsLoading: false
     }
   },
   computed: {
@@ -279,12 +291,67 @@ export default {
           this.workspace = res || null
           const tab = this.$route.query.tab
           if (tab) this.activeTab = tab
+          if (this.activeTab === 'invocations') {
+            this.loadInvocations()
+          }
+          if (this.activeTab === 'pushRecords') {
+            this.loadPushRecords()
+          }
         })
         .catch(err => {
           this.workspace = null
           this.$message.error((err && err.message) || '案件工作台加载失败')
         })
         .finally(() => { this.loading = false })
+    },
+    loadInvocations () {
+      const caseId = this.$route.params.caseId
+      if (!caseId) return
+      this.invocationsLoading = true
+      listInvocations({
+        resourceType: 'CASE',
+        resourceId: caseId,
+        page: 1,
+        size: 100
+      })
+        .then(data => {
+          this.invocations = (data && data.items) || []
+        })
+        .catch(err => {
+          this.$message.error((err && err.message) || '加载 API 调用记录失败')
+        })
+        .finally(() => {
+          this.invocationsLoading = false
+        })
+    },
+    pushRecordRowKey (record) {
+      return (record && record.eventId) || ('row-' + (record && record.id))
+    },
+    loadPushRecords () {
+      const caseId = this.$route.params.caseId
+      const summary = this.workspace && this.workspace.caseSummary
+      // 推送记录按案件主资源（TASK/VERIFY_FIX_JOB/INSTANCE）查询，caseId 本身不作为投递资源标识
+      const resourceType = summary && summary.primaryResourceType
+      const resourceId = summary && summary.primaryResourceId
+      if (!caseId || !summary || !summary.partnerId || !resourceId) {
+        this.pushRecords = []
+        return Promise.resolve()
+      }
+      this.pushRecordsLoading = true
+      return listPushRecords({
+        partnerId: summary.partnerId,
+        resourceType,
+        resourceId
+      })
+        .then(records => {
+          this.pushRecords = (records || []).map(r => ({ ...r }))
+        })
+        .catch(err => {
+          this.$message.error((err && err.message) || '加载推送记录失败')
+        })
+        .finally(() => {
+          this.pushRecordsLoading = false
+        })
     },
     goOpenTaskWorkspace () {
       if (!this.taskScanTaskId) return

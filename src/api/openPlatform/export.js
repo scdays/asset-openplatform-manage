@@ -8,3 +8,10 @@ export function downloadAdminExport (partnerId, exportId) {
     responseType: 'blob'
   })
 }
+
+export function downloadAdminExportByEventId (partnerId, eventId) {
+  return openApiRequest.get(`/internal/admin/webhook-events/${encodeURIComponent(eventId)}/export/download`, {
+    params: { partnerId },
+    responseType: 'blob'
+  })
+}

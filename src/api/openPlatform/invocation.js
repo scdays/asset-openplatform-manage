@@ -1,4 +1,4 @@
-import openApiRequest from '@/utils/openApiRequest'
+import platformAdminRequest from '@/utils/platformAdminRequest'
 
 const INVOCATION_PREFIX = '/internal/admin/invocations'
 const WEBHOOK_DELIVERY_PREFIX = '/internal/admin/webhook-deliveries'
@@ -28,23 +28,23 @@ export function listInvocations (params = {}) {
     startedFrom: params.startedFrom,
     startedTo: params.startedTo
   })
-  return openApiRequest.get(INVOCATION_PREFIX, { params: query })
+  return platformAdminRequest.get(INVOCATION_PREFIX, { params: query })
 }
 
 export function getInvocationDetail (invocationId) {
-  return openApiRequest.get(`${INVOCATION_PREFIX}/${encodeURIComponent(invocationId)}`)
+  return platformAdminRequest.get(`${INVOCATION_PREFIX}/${encodeURIComponent(invocationId)}`)
 }
 
 export function getInvocationResponseBody (invocationId) {
-  return openApiRequest.get(`${INVOCATION_PREFIX}/${encodeURIComponent(invocationId)}/response-body`)
+  return platformAdminRequest.get(`${INVOCATION_PREFIX}/${encodeURIComponent(invocationId)}/response-body`)
 }
 
 export function getInvocationRequestBody (invocationId) {
-  return openApiRequest.get(`${INVOCATION_PREFIX}/${encodeURIComponent(invocationId)}/request-body`)
+  return platformAdminRequest.get(`${INVOCATION_PREFIX}/${encodeURIComponent(invocationId)}/request-body`)
 }
 
 export function getPartnerStats (partnerId) {
-  return openApiRequest.get(`${PARTNER_PREFIX}/${encodeURIComponent(partnerId)}/stats`)
+  return platformAdminRequest.get(`${PARTNER_PREFIX}/${encodeURIComponent(partnerId)}/stats`)
 }
 
 export function listWebhookDeliveries (params = {}) {
@@ -57,13 +57,13 @@ export function listWebhookDeliveries (params = {}) {
     resourceType: params.resourceType,
     resourceId: params.resourceId
   })
-  return openApiRequest.get(WEBHOOK_DELIVERY_PREFIX, { params: query })
+  return platformAdminRequest.get(WEBHOOK_DELIVERY_PREFIX, { params: query })
 }
 
 export function getWebhookDeliveryDetail (deliveryId) {
-  return openApiRequest.get(`${WEBHOOK_DELIVERY_PREFIX}/${encodeURIComponent(deliveryId)}`)
+  return platformAdminRequest.get(`${WEBHOOK_DELIVERY_PREFIX}/${encodeURIComponent(deliveryId)}`)
 }
 
 export function retryWebhookDelivery (deliveryId) {
-  return openApiRequest.post(`${WEBHOOK_DELIVERY_PREFIX}/${encodeURIComponent(deliveryId)}/retry`)
+  return platformAdminRequest.post(`${WEBHOOK_DELIVERY_PREFIX}/${encodeURIComponent(deliveryId)}/retry`)
 }

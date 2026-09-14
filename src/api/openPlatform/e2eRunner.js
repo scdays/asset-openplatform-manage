@@ -14,8 +14,6 @@ import {
 import {
   bindPartnerAuth,
   checkHealth,
-  createE2eCredential,
-  createE2ePartner,
   createVulTask,
   downloadPartnerExport,
   fetchOAuthToken,
@@ -169,22 +167,6 @@ export async function runHealthStep () {
     return stepResult('health', '健康检查', ok ? 'success' : 'success', '服务可达', { data: res })
   } catch (e) {
     return stepResult('health', '健康检查', 'error', e.message || '服务不可达')
-  }
-}
-
-export async function runPartnerStep (partnerId) {
-  try {
-    await createE2ePartner(partnerId)
-    const cred = await createE2eCredential(partnerId)
-    return stepResult('partner', '创建 Partner 与凭证', 'success',
-      `partnerId=${partnerId}，凭证见页面「OAuth 凭证」卡片`, {
-        partnerId,
-        clientId: cred.clientId,
-        clientSecret: cred.clientSecret,
-        source: 'create'
-      })
-  } catch (e) {
-    return stepResult('partner', '创建 Partner 与凭证', 'error', e.message || '创建失败')
   }
 }
 
@@ -438,7 +420,7 @@ export async function runVerifyScanExportStep (taskId, exportWaitSec = 45) {
       download: false
     })
   } catch (e) {
-    return stepResult('verifyScanExport', 'VERIFY_SCAN 外发', 'error', e.message || '外发失败')
+    return stepResult('verifyScanExport', 'VERIFY 外发', 'error', e.message || '外发失败')
   }
 }
 
@@ -535,10 +517,10 @@ export async function runNoVerifyFixScanExportStep (taskId, maxWaitSec = 8) {
     const ready = waited.items || []
     if (ready.length) {
       return stepResult('noVfExport', '修复核验不外发', 'error',
-        `不应出现 VERIFY_FIX_SCAN 外发，实际 READY×${ready.length}`, { ready })
+        `不应出现 VERIFY_FIX 外发，实际 READY×${ready.length}`, { ready })
     }
     return stepResult('noVfExport', '修复核验不外发', 'success',
-      `未出现 VERIFY_FIX_SCAN 外发（等待 ${maxWaitSec}s）`)
+      `未出现 VERIFY_FIX 外发（等待 ${maxWaitSec}s）`)
   } catch (e) {
     return stepResult('noVfExport', '修复核验不外发', 'error', e.message || '检查失败')
   }
@@ -632,7 +614,7 @@ export async function runInstanceBatchStep (ids, runId, options = {}) {
 }
 
 /**
- * 完整实例状态机：验证 → VERIFY_SCAN → 处置 → 异步修复核验 → 运营完成 → Webhook（不外发 VERIFY_FIX_SCAN）
+ * 完整实例状态机：验证 → VERIFY → 处置 → 异步修复核验 → 运营完成 → Webhook（不外发 VERIFY_FIX）
  */
 export async function runInstanceFsmFlow (context) {
   const {
@@ -672,11 +654,11 @@ export async function runInstanceFsmFlow (context) {
   if (failFast(r)) return results
 
   r = await runVerifyScanExportStep(taskId, exportWaitSec)
-  push({ ...r, key: 'verifyScanExport', title: 'VERIFY_SCAN 外发' })
+  push({ ...r, key: 'verifyScanExport', title: 'VERIFY 外发' })
   if (failFast(r)) return results
 
   r = await runWebhookStep(partnerId, taskId, { eventTypes: ['EXPORT_READY'] })
-  push({ ...r, key: 'verifyScanWebhook', title: 'VERIFY_SCAN Webhook' })
+  push({ ...r, key: 'verifyScanWebhook', title: 'VERIFY Webhook' })
   if (failFast(r)) return results
 
   r = await runInstanceRemediateStep(instMain, runId, '主实例')
@@ -785,45 +767,35 @@ export async function runTokenSkipStep (partnerId, accessToken, meta = {}) {
 
 async function runPartnerTokenSteps (context, push) {
   const partnerId = context.partnerId
-  if (context.partnerMode === 'existing') {
-    let r
-    if (context.accessToken) {
-      r = await runPartnerSkipStep(partnerId, {
-        clientId: context.clientId,
-        clientSecret: context.clientSecret
-      })
-      push(r)
-      if (r.status === 'error') return { ok: false }
-      r = await runTokenSkipStep(partnerId, context.accessToken, {
-        clientId: context.clientId,
-        expiresIn: context.expiresIn,
-        source: context.tokenSource
-      })
-      push(r)
-      if (r.status === 'error') return { ok: false }
-      return { ok: true, partnerId }
-    }
-    if (!context.clientId || !context.clientSecret) {
-      push(stepResult('partner', '选用已有 Partner', 'error',
-        '请选择接入方并用凭证换取 Token，或粘贴 Token 后绑定'))
-      return { ok: false }
-    }
+  let r
+  if (context.accessToken) {
     r = await runPartnerSkipStep(partnerId, {
       clientId: context.clientId,
       clientSecret: context.clientSecret
     })
     push(r)
     if (r.status === 'error') return { ok: false }
-    r = await runTokenStep(context.clientId, context.clientSecret, partnerId)
+    r = await runTokenSkipStep(partnerId, context.accessToken, {
+      clientId: context.clientId,
+      expiresIn: context.expiresIn,
+      source: context.tokenSource
+    })
     push(r)
     if (r.status === 'error') return { ok: false }
-    return { ok: true, partnerId: r.partnerId || partnerId }
+    return { ok: true, partnerId }
   }
-
-  let r = await runPartnerStep(partnerId)
+  if (!context.clientId || !context.clientSecret) {
+    push(stepResult('partner', '选用已有 Partner', 'error',
+      '请选择接入方并用凭证换取 Token，或粘贴 Token 后绑定'))
+    return { ok: false }
+  }
+  r = await runPartnerSkipStep(partnerId, {
+    clientId: context.clientId,
+    clientSecret: context.clientSecret
+  })
   push(r)
   if (r.status === 'error') return { ok: false }
-  r = await runTokenStep(r.clientId, r.clientSecret, r.partnerId)
+  r = await runTokenStep(context.clientId, context.clientSecret, partnerId)
   push(r)
   if (r.status === 'error') return { ok: false }
   return { ok: true, partnerId: r.partnerId || partnerId }
